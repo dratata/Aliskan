@@ -22,7 +22,7 @@ Tamamlandı: destek kontrollü mikrofon/metin; yerel Türkçe kalıp ayrıştır
 
 ## Aşama 5 — Doğrulama
 
-35 domain/veri testi ve 14 mobil Playwright senaryosu geçti. Üretim derlemesi başarılı; PWA çevrimdışı açılışı, kayıt kalıcılığı, JSON birleştirme, tarih değişimi ve hatalı IndexedDB yazısında başarı göstermeme doğrulandı. Üretim bağımlılığı denetimi: 0 bilinen güvenlik açığı. Görseller 390 px mobil genişlikte incelendi. Grafik kodu ayrı lazy chunk'tır. Kaynak kodda sır veya kişisel başlangıç profili yoktur.
+35 domain/veri testi ve 16 mobil Playwright senaryosu geçti. Üretim derlemesi başarılı; PWA çevrimdışı açılışı, kayıt kalıcılığı, JSON birleştirme, tarih değişimi ve hatalı IndexedDB yazısında başarı göstermeme doğrulandı. Üretim bağımlılığı denetimi: 0 bilinen güvenlik açığı. Görseller 390 px mobil genişlikte incelendi. Grafik kodu ayrı lazy chunk'tır. Kaynak kodda sır veya kişisel başlangıç profili yoktur.
 
 Bağımsız inceleme bulundu ve düzeltildi: tamamlanmış zamanlayıcıdan yeni oturum; modül/mola geçişinde oturum koruma; egzersiz adımı/sahibi kalıcılığı; eksik/geçersiz yedek reddi; yedek fotoğraf boyutu uyumu; günlük tek hedef artışı; uyku saatinden yeniden süre hesabı; başarısız geri almada doğru durum; çift tamamlamada tek kayıt; egzersiz süre sınırları; gece yarısında günlük plan yenileme.
 
@@ -36,4 +36,8 @@ Kişisel başlangıç bilgileri ayrı, yerel JSON yedeğinde hazırlanmıştır;
 
 ## Yayın
 
-GitHub hedefi: dratata/Aliskan. Vercel'de mevcut hesap kapsamına erişim sorgusu 403 forbidden döndürdü; yayın bağlantısı henüz doğrulanmadı. CLI geri dönüşü ve depo bağlantısı kontrol ediliyor. Başarılı olmayan yayın canlı olarak raporlanmaz.
+Kaynak kod dratata/Aliskan main dalına gönderildi ve dosya içeriği GitHub üzerinden doğrulandı. Vercel hesabının görünen kapsamında API isteği 403 forbidden döndürdü. CLI geri dönüşünde kayıtlı oturum bulunmadı; cihaz yetkilendirmesi istendi. Canlı yayın bağlantısı henüz doğrulanmadı. Başarılı olmayan yayın canlı olarak raporlanmaz.
+
+1440 px masaüstü kontrolünde yatay taşma ve JavaScript sayfa hatası yok. WebKit indirildi fakat çalıştırma için gereken sistem kitaplıkları ortamda eksik; bu motor için başarılı test iddiası yok. Gerçek iPhone doğrulaması sonraki kontroldür.
+
+Son ek doğrulama: Pomodoro tamamlama sonrası 10 net dakika kaydı ve ertesi gün 20 dakika önerisi; rehber kapalıyken uygulama içi oturum bitiş bildirimi. Sesli uyku kayıtlarına belirtilmeyen kalite/enerji puanları eklenmez.
