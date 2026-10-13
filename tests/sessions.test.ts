@@ -1,0 +1,21 @@
+import {describe,it,expect} from 'vitest';
+import {createInitialState} from '../src/domain/defaults';
+import {proposeAdaptation,studyPlan} from '../src/domain/adaptation';
+import {remainingSeconds,completeSession} from '../src/domain/sessions';
+import {localDate,shiftDate} from '../src/domain/dates';
+import type {HabitEvent} from '../src/domain/types';
+const yesterday=shiftDate(localDate(),-1);
+const event=(type:HabitEvent['type'],value:number,data:HabitEvent['data']={}):HabitEvent=>({id:'test',type,value,date:yesterday,at:new Date().toISOString(),source:'manual',data});
+describe('oturumlar ve açıklanabilir adaptasyon',()=>{
+ it('arka planda gerçek kalan süreyi hesaplar',()=>{expect(remainingSeconds(10000,7000)).toBe(3);expect(remainingSeconds(10000,15000)).toBe(0)});
+ it('oturumu mükerrer yazmaz',()=>{const s=createInitialState(),e=event('study',10);expect(completeSession(completeSession(s,e),e).events).toHaveLength(1)});
+ it('ilk plan 10 dk ve toplamı üst sınırda kalır',()=>{expect(studyPlan(10)).toEqual([10]);expect(studyPlan(120).reduce((a,b)=>a+b,0)).toBe(120)});
+ it('başarılı önceki gün sonrası 20 dakika önerir ama değiştirmez',()=>{const s=createInitialState();s.events=[event('study',10)];const p=proposeAdaptation(s).find(p=>p.habitId==='study');expect(p?.target).toBe(20);expect(s.habits[0].target).toBe(10)});
+ it('kayıtsız günde başarısızlık varsaymaz',()=>{expect(proposeAdaptation(createInitialState())).toEqual([])});
+ it('ağrı halinde egzersizi artırmaz',()=>{const s=createInitialState();s.events=[event('exercise',5,{habitId:'exerciseLunch',pain:true,effort:4})];expect(proposeAdaptation(s).some(p=>p.direction==='up')).toBe(false)});
+ it('aynı gün en fazla bir artış ve 120 sınırı',()=>{const s=createInitialState();s.habits[0].target=120;s.events=[event('study',120),{...event('exercise',5,{habitId:'exerciseLunch',effort:2,pain:false}),id:'e'}];expect(proposeAdaptation(s).filter(p=>p.direction==='up').length).toBeLessThanOrEqual(1);expect(proposeAdaptation(s).find(p=>p.habitId==='study')?.target??120).toBeLessThanOrEqual(120)});
+ it('mola çalışma toplamından ayrıdır',()=>{const s=createInitialState();s.events=[event('study',10,{breakMinutes:3})];expect(s.events.filter(e=>e.type==='study').reduce((a,e)=>a+e.value,0)).toBe(10)});
+});
+import {switchTimer,resetTimer,timerMatches} from '../src/domain/timers';
+it('mola için geçiş çalışma oturumunu kaybetmez',()=>{let s=createInitialState();s.timer={id:'focus',kind:'study',habitId:'study',context:'',total:600,remaining:600,deadline:600000,running:true,saved:false,topic:'Konu',date:localDate()};s=switchTimer(s,{id:'break',kind:'routine',context:'study-break',total:180,remaining:180,deadline:null,running:false,saved:false,topic:'Mola',date:localDate()},100000);expect(s.timerArchive.find(t=>t.id==='focus')?.remaining).toBe(500);expect(s.timerArchive.find(t=>t.id==='focus')?.running).toBe(false)});
+it('başka modülün sıfırlaması çalışma kaydını silmez',()=>{const s=createInitialState();s.timer={id:'focus',kind:'study',habitId:'study',context:'',total:600,remaining:500,deadline:null,running:false,saved:false,topic:'Konu',date:localDate()};expect(resetTimer(s,'breathing',undefined,'').timer?.id).toBe('focus');expect(timerMatches(s.timer,'exercise','exerciseLunch','move-0')).toBe(false)});

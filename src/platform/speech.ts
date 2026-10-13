@@ -1,0 +1,4 @@
+interface SpeechResult {isFinal:boolean;[index:number]:{transcript:string}}
+export interface SpeechRecognitionLike {lang:string;interimResults:boolean;continuous:boolean;onresult:((e:{results:ArrayLike<SpeechResult>;resultIndex:number})=>void)|null;onerror:((e:{error:string})=>void)|null;onend:(()=>void)|null;start:()=>void;stop:()=>void;abort:()=>void}
+export function speechSupported():boolean{return !!(window as unknown as {SpeechRecognition?:unknown;webkitSpeechRecognition?:unknown}).SpeechRecognition||!!(window as unknown as {webkitSpeechRecognition?:unknown}).webkitSpeechRecognition}
+export function createRecognition():SpeechRecognitionLike|null {const w=window as unknown as {SpeechRecognition?:new()=>SpeechRecognitionLike;webkitSpeechRecognition?:new()=>SpeechRecognitionLike};const C=w.SpeechRecognition??w.webkitSpeechRecognition;return C?new C():null}

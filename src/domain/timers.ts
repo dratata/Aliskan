@@ -1,0 +1,5 @@
+import type {AppState,TimerState,HabitId} from './types';
+import {remainingSeconds} from './sessions';
+export function timerMatches(timer:TimerState|null,kind:TimerState['kind'],habitId:HabitId|undefined,context=''):boolean{return !!timer&&timer.kind===kind&&timer.habitId===habitId&&timer.context===context}
+export function switchTimer(state:AppState,next:TimerState,now:number):AppState {let archive=state.timerArchive.filter(t=>t.id!==next.id);if(state.timer&&state.timer.id!==next.id&&!state.timer.saved){const t=state.timer;archive=[...archive.filter(x=>x.id!==t.id),{...t,running:false,remaining:t.running&&t.deadline?remainingSeconds(t.deadline,now):t.remaining,deadline:null}]}return {...state,timer:next,timerArchive:archive}}
+export function resetTimer(state:AppState,kind:TimerState['kind'],habitId:HabitId|undefined,context=''):AppState{return {...state,timer:timerMatches(state.timer,kind,habitId,context)?null:state.timer,timerArchive:state.timerArchive.filter(t=>!timerMatches(t,kind,habitId,context))}}
