@@ -1,12 +1,149 @@
-import {GuidePlayer} from '../components/GuidePlayer';
-import {VideoCard} from '../components/VideoCard';
-import {GuideCoach} from '../components/GuideCoach';
-import {dailyGuides} from '../content/guides';
-import {useState} from 'react';
-import {Wind} from 'lucide-react';
-import {useStore} from '../app/Store';
-import {Timer} from '../components/Timer';
-import {Field,Card} from '../components/UI';
-export function Breathing(){const {state,addEvent}=useStore(),[minutes,setMinutes]=useState(3),[before,setBefore]=useState(5),[after,setAfter]=useState(3),[voice,setVoice]=useState(false),[vibrate,setVibrate]=useState(false);const running=state.timer?.kind==='breathing'&&state.timer.running;return <div className="stack"><GuideCoach module="breathing"/><GuidePlayer guide={dailyGuides.breathing} compact/><VideoCard id="breathing"/><div className="module-intro"><span className="icon-box blue"><Wind/></span><div><h3>Biraz yavaşla.</h3><p>Nefes tutmadan, rahat ve doğal bir ritim.</p></div></div><Field label="Süre"><select disabled={!!running} value={minutes} onChange={e=>setMinutes(Number(e.target.value))}>{[1,3,5].map(v=><option key={v} value={v}>{v} dakika</option>)}</select></Field><Field label={`Başlamadan önce stres: ${before} / 10`}><input type="range" min="0" max="10" value={before} onChange={e=>setBefore(Number(e.target.value))}/></Field><BreathCues enabled={voice} vibrate={vibrate}/><Timer kind="breathing" minutes={minutes} breathing onComplete={async t=>!!await addEvent('breathing',(t.total-t.remaining)/60,{stressBefore:before,stressAfter:after},t.date,'manual',t.id)}/><Field label={`Şimdi stresin: ${after} / 10`}><input type="range" min="0" max="10" value={after} onChange={e=>setAfter(Number(e.target.value))}/></Field><label className="check-label"><input type="checkbox" checked={voice} onChange={e=>setVoice(e.target.checked)} disabled={!('speechSynthesis' in window)}/> Sesli yönlendirme</label><label className="check-label"><input type="checkbox" checked={vibrate} onChange={e=>setVibrate(e.target.checked)} disabled={!('vibrate' in navigator)}/> Hafif titreşim {!('vibrate' in navigator)&&'(bu tarayıcı desteklemiyor)'}</label><Card className="soft-note">Nefesi zorlamadan alıp ver. Başın dönerse dur, normal nefesine dön. Ritmi takip etmek zor gelirse kendi rahat hızını seç.</Card></div>}
-import {useEffect} from 'react';
-function BreathCues({enabled,vibrate}:{enabled:boolean;vibrate:boolean}){const {state}=useStore();useEffect(()=>{if(!state.timer||state.timer.kind!=='breathing'||!state.timer.running)return;let last=-1;const i=setInterval(()=>{const t=state.timer!;const remaining=t.deadline?Math.max(0,Math.ceil((t.deadline-Date.now())/1000)):t.remaining;const phase=Math.floor((t.total-remaining)/4);if(phase===last||remaining<=0)return;last=phase;if(document.visibilityState!=='visible')return;if(enabled&&'speechSynthesis' in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(phase%2===0?'Nefes al':'Nefes ver');u.lang='tr-TR';u.rate=.8;speechSynthesis.speak(u)}if(vibrate&&'vibrate' in navigator)navigator.vibrate(40)},250);return()=>{clearInterval(i);if('speechSynthesis' in window)speechSynthesis.cancel()}},[state.timer?.id,state.timer?.running,enabled,vibrate]);return null}
+import { GuidePlayer } from "../components/GuidePlayer";
+import { VideoCard } from "../components/VideoCard";
+import { GuideCoach } from "../components/GuideCoach";
+import { dailyGuides } from "../content/guides";
+import { useState } from "react";
+import { Wind } from "lucide-react";
+import { useStore } from "../app/Store";
+import { Timer } from "../components/Timer";
+import { Field, Card } from "../components/UI";
+export function Breathing({ sessionId }: { sessionId?: string }) {
+  const { state, addEvent } = useStore(),
+    [minutes, setMinutes] = useState(3),
+    [before, setBefore] = useState(5),
+    [after, setAfter] = useState(3),
+    [voice, setVoice] = useState(false),
+    [vibrate, setVibrate] = useState(false);
+  const running = state.timer?.kind === "breathing" && state.timer.running;
+  return (
+    <div className="stack">
+      <GuideCoach module="breathing" />
+      <GuidePlayer guide={dailyGuides.breathing} compact />
+      <VideoCard id="breathing" />
+      <div className="module-intro">
+        <span className="icon-box blue">
+          <Wind />
+        </span>
+        <div>
+          <h3>Biraz yavaşla.</h3>
+          <p>Nefes tutmadan, rahat ve doğal bir ritim.</p>
+        </div>
+      </div>
+      <Field label="Süre">
+        <select
+          disabled={!!running}
+          value={minutes}
+          onChange={(e) => setMinutes(Number(e.target.value))}
+        >
+          {[1, 3, 5].map((v) => (
+            <option key={v} value={v}>
+              {v} dakika
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label={`Başlamadan önce stres: ${before} / 10`}>
+        <input
+          type="range"
+          min="0"
+          max="10"
+          value={before}
+          onChange={(e) => setBefore(Number(e.target.value))}
+        />
+      </Field>
+      <BreathCues enabled={voice} vibrate={vibrate} />
+      <Timer
+        sessionId={sessionId}
+        kind="breathing"
+        minutes={minutes}
+        breathing
+        onComplete={async (t) =>
+          !!(await addEvent(
+            "breathing",
+            (t.total - t.remaining) / 60,
+            { stressBefore: before, stressAfter: after },
+            t.date,
+            "manual",
+            t.id,
+          ))
+        }
+      />
+      <Field label={`Şimdi stresin: ${after} / 10`}>
+        <input
+          type="range"
+          min="0"
+          max="10"
+          value={after}
+          onChange={(e) => setAfter(Number(e.target.value))}
+        />
+      </Field>
+      <label className="check-label">
+        <input
+          type="checkbox"
+          checked={voice}
+          onChange={(e) => setVoice(e.target.checked)}
+          disabled={!("speechSynthesis" in window)}
+        />{" "}
+        Sesli yönlendirme
+      </label>
+      <label className="check-label">
+        <input
+          type="checkbox"
+          checked={vibrate}
+          onChange={(e) => setVibrate(e.target.checked)}
+          disabled={!("vibrate" in navigator)}
+        />{" "}
+        Hafif titreşim{" "}
+        {!("vibrate" in navigator) && "(bu tarayıcı desteklemiyor)"}
+      </label>
+      <Card className="soft-note">
+        Nefesi zorlamadan alıp ver. Başın dönerse dur, normal nefesine dön.
+        Ritmi takip etmek zor gelirse kendi rahat hızını seç.
+      </Card>
+    </div>
+  );
+}
+import { useEffect } from "react";
+function BreathCues({
+  enabled,
+  vibrate,
+}: {
+  enabled: boolean;
+  vibrate: boolean;
+}) {
+  const { state } = useStore();
+  useEffect(() => {
+    if (
+      !state.timer ||
+      state.timer.kind !== "breathing" ||
+      !state.timer.running
+    )
+      return;
+    let last = -1;
+    const i = setInterval(() => {
+      const t = state.timer!;
+      const remaining = t.deadline
+        ? Math.max(0, Math.ceil((t.deadline - Date.now()) / 1000))
+        : t.remaining;
+      const phase = Math.floor((t.total - remaining) / 4);
+      if (phase === last || remaining <= 0) return;
+      last = phase;
+      if (document.visibilityState !== "visible") return;
+      if (enabled && "speechSynthesis" in window) {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(
+          phase % 2 === 0 ? "Nefes al" : "Nefes ver",
+        );
+        u.lang = "tr-TR";
+        u.rate = 0.8;
+        speechSynthesis.speak(u);
+      }
+      if (vibrate && "vibrate" in navigator) navigator.vibrate(40);
+    }, 250);
+    return () => {
+      clearInterval(i);
+      if ("speechSynthesis" in window) speechSynthesis.cancel();
+    };
+  }, [state.timer?.id, state.timer?.running, enabled, vibrate]);
+  return null;
+}

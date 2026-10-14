@@ -13,6 +13,8 @@ import {
 import { Card } from "../components/UI";
 import type { HabitId } from "../domain/types";
 import { useStore } from "../app/Store";
+import { SessionShelf } from "./SessionShelf";
+import type { OpenModule } from "../app/navigation";
 const modules = [
   {
     id: "study",
@@ -103,11 +105,7 @@ const modules = [
     tag: "KOLAY KAYIT",
   },
 ];
-export function Start({
-  open,
-}: {
-  open: (id: string, habit?: HabitId) => void;
-}) {
+export function Start({ open }: { open: OpenModule }) {
   const { state } = useStore();
   return (
     <>
@@ -116,6 +114,7 @@ export function Start({
         <h1>Şimdi sana ne iyi gelir?</h1>
         <p>Birini seç. Gerisini adım adım birlikte yapalım.</p>
       </div>
+      <SessionShelf open={open} />
       <div className="start-grid">
         {modules.map((m) => (
           <button

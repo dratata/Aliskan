@@ -71,3 +71,11 @@ Uyku ekranı seçilen geceyi günceller; uyku kalitesi/sabah enerjisi isteğe ba
 Sabah rutini saat/süre/sıra bakımından düzenlenebilir. Gece ve sabah rutinleri kaldığı adımı ve başlangıç gününü saklar. Gece yarısında rutin iki güne bölünmez. Rutin gününü kullanıcı değiştirebilir. Alışkanlıktan rutin başlangıç saati değiştirildiğinde adımlar birlikte kayar. Sabah adımı silindiğinde otomatik görev ilerlemesi güncellenir.
 
 52 domain/veri testi, 33 mobil E2E senaryosu ve üretim derlemesi başarılı. Eksikler: kapalı uygulama sunucu push, bulut eşitleme ve gerçek iPhone/Safari cihaz testi; kapsam bu turda yerel veri ve mevcut günlük akışların iyileştirilmesidir. Ayrıntılar: AUDIT-SECOND-2026-10-14.md.
+
+## 14 Ekim — Üçüncü tarama: odak, konu geçmişi ve yedek güvenliği
+
+Çalışmaya başlayınca sade odak görünümü açılır. Gerçek net kayıtlardan konu toplamları, arama, konuya yeniden çalışma ve kayıtları koruyan ad düzenleme eklenir. Başlat ve Bugün ekranları yarım çalışma/mola/nefes/sigara erteleme oturumuna dönüş sunar. Mola yanlış modüle yönlenmez; aynı sayacı tekrar başlatma ve gecikmiş bitiş kontrolünün başka sekmedeki duraklatmayı ezmesi düzeltilir.
+
+Yedek hazırlama zamanı ayrı IndexedDB metadata alanında saklanır. İlk kayıttan sonra ve haftalık nazik hatırlatma ile yarına erteleme vardır. Kalıcı depolama isteği yalnız tarayıcı desteği varsa sunulur ve gerçek izin sonucu gösterilir. Bir–üç dakikalık egzersiz hedeflerine uygun daha az hareket kullanılır.
+
+59 birim/veri testi, 41 tarayıcı senaryosu ve üretim derlemesi başarılı. Odak ve devam ekranları 320/390/430/1280 pikselde taşma ve JavaScript hatası olmadan incelendi. Fiziksel iPhone/Safari, kapalı uygulama sunucu push ve bulut senkronizasyonu açık kalır. Ayrıntılar: AUDIT-THIRD-2026-10-14.md.

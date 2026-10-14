@@ -25,11 +25,10 @@ import {
   Empty,
 } from "../components/UI";
 import { Plant } from "../components/Illustration";
-export function Today({
-  open,
-}: {
-  open: (module: string, habit?: HabitId) => void;
-}) {
+import { BackupReminder } from "./BackupReminder";
+import { timerRoute } from "../domain/timers";
+import type { OpenModule } from "../app/navigation";
+export function Today({ open }: { open: OpenModule }) {
   const { state, update, addEvent } = useStore(),
     [selected, setSelected] = useState<Task | null>(null),
     [time, setTime] = useState(""),
@@ -51,6 +50,15 @@ export function Today({
     smoke = state.events
       .filter((e) => e.date === today && e.type === "smoking")
       .reduce((a, e) => a + e.value, 0);
+  const active = state.timer && !state.timer.saved ? state.timer : null,
+    activeRoute = active ? timerRoute(active) : null;
+  const resumeActive = () => {
+    if (active && activeRoute)
+      open(activeRoute.id, activeRoute.habit, {
+        timerId: active.id,
+        mode: activeRoute.mode,
+      });
+  };
   const proposals = proposeAdaptation(state),
     next = nextTask(tasks, clock),
     visibleTasks =
@@ -113,12 +121,17 @@ export function Today({
           </p>
           <button
             onClick={() => {
+              if (activeRoute) {
+                resumeActive();
+                return;
+              }
               const task = next;
               if (task) open(task.habitId, task.habitId);
               else open("breathing");
             }}
           >
-            Küçük bir adımla başla <ArrowUpRight size={17} />
+            {activeRoute ? "Oturumuna dön" : "Küçük bir adımla başla"}{" "}
+            <ArrowUpRight size={17} />
           </button>
         </div>
         <Plant />
@@ -141,7 +154,34 @@ export function Today({
         </div>
         <span className="progress-decoration">✦</span>
       </div>
-      {next && (
+      {activeRoute && active && (
+        <section className="card next-step" aria-label="Kaldığın oturum">
+          <span className="icon-box sage">
+            <Clock size={21} />
+          </span>
+          <div>
+            <span className="eyebrow">KALDIĞIN YERDEN</span>
+            <strong className="next-title">
+              {activeRoute.mode === "break"
+                ? "Çalışma molası"
+                : active.topic || "Başladığın oturum"}
+            </strong>
+            <p>
+              {active.running
+                ? "Oturum devam ediyor"
+                : "Duraklatılmış süre korunuyor"}
+            </p>
+          </div>
+          <button
+            className="icon-button"
+            aria-label="Oturuma dön"
+            onClick={resumeActive}
+          >
+            <ArrowUpRight size={21} />
+          </button>
+        </section>
+      )}
+      {next && !activeRoute && (
         <section className="card next-step" aria-label="Sıradaki küçük adım">
           <HabitIcon id={next.habitId} />
           <div>
@@ -322,6 +362,7 @@ export function Today({
           )}
         </div>
       )}
+      <BackupReminder />
       <Card className="coach-note">
         <span className="coach-star">✧</span>
         <div>

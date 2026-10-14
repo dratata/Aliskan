@@ -59,16 +59,19 @@ const titles: Record<string, string> = {
   family: "Birlikte oyun zamanı",
   voice: "Kolay kayıt",
 };
+import { timerRoute } from "../domain/timers";
+import type { ModuleOptions } from "./navigation";
 function Shell() {
   const { state, ready, error, clearError } = useStore(),
     [tab, setTab] = useState("today"),
-    [module, setModule] = useState<{ id: string; habit?: HabitId } | null>(
-      null,
-    ),
+    [module, setModule] = useState<
+      ({ id: string; habit?: HabitId } & ModuleOptions) | null
+    >(null),
     reminder = useReminders(),
     timerNotice = useTimerCompletion(),
     pwa = usePwa();
-  const open = (id: string, habit?: HabitId) => setModule({ id, habit });
+  const open = (id: string, habit?: HabitId, options?: ModuleOptions) =>
+    setModule({ id, habit, ...options });
   useEffect(() => {
     const dark =
       state.settings.theme === "dark" ||
@@ -103,7 +106,8 @@ function Shell() {
     setTab(id);
     window.scrollTo({ top: 0, behavior: "instant" });
   };
-  const activeTimer = state.timer && !state.timer.saved;
+  const activeTimer =
+    state.timer && !state.timer.saved && timerRoute(state.timer);
   return (
     <>
       <header className="topbar">
@@ -192,19 +196,14 @@ function Shell() {
       {activeTimer && !module && (
         <button
           className="active-timer-banner"
-          onClick={() =>
-            open(
-              state.timer!.kind === "study"
-                ? "study"
-                : state.timer!.kind === "breathing"
-                  ? "breathing"
-                  : state.timer!.kind === "delay"
-                    ? "smoking"
-                    : state.timer!.kind === "exercise"
-                      ? (state.timer!.habitId ?? "exerciseLunch")
-                      : (state.timer!.habitId ?? "night"),
-            )
-          }
+          onClick={() => {
+            const route = timerRoute(state.timer!);
+            if (route)
+              open(route.id, route.habit, {
+                timerId: state.timer!.id,
+                mode: route.mode,
+              });
+          }}
         >
           <span className="live-dot" />
           {state.timer!.remaining === 0
@@ -251,13 +250,16 @@ function Shell() {
         >
           <div key={module.id}>
             {module.id === "study" ? (
-              <Study />
+              <Study
+                sessionId={module.timerId}
+                initialBreak={module.mode === "break"}
+              />
             ) : module.id.startsWith("exercise") ? (
               <Exercise habitId={module.habit ?? (module.id as HabitId)} />
             ) : module.id === "smoking" ? (
-              <Smoking open={open} />
+              <Smoking open={open} sessionId={module.timerId} />
             ) : module.id === "breathing" ? (
-              <Breathing />
+              <Breathing sessionId={module.timerId} />
             ) : module.id === "night" || module.id === "morning" ? (
               <Routine morning={module.id === "morning"} open={open} />
             ) : module.id === "nutrition" || module.id === "water" ? (

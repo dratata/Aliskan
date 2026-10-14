@@ -1,17 +1,260 @@
-import {useEffect,useRef,useState} from 'react';
-import {Play,Pause,RotateCcw,Bell} from 'lucide-react';
-import {unlockTimerSound} from '../platform/timer';
-import {useStore} from '../app/Store';
-import {localDate} from '../domain/dates';
-import {remainingSeconds} from '../domain/sessions';
-import {timerMatches,switchTimer,resetTimer} from '../domain/timers';
-import type {HabitId,TimerState} from '../domain/types';
-import {Button} from './UI';
-export function Timer({kind,minutes,habitId,topic='',context='',onComplete,breathing=false}:{kind:TimerState['kind'];minutes:number;habitId?:HabitId;topic?:string;context?:string;onComplete:(timer:TimerState)=>Promise<boolean>;breathing?:boolean}){const {state,update}=useStore(),[now,setNow]=useState(Date.now()),[busy,setBusy]=useState(false),saving=useRef(false);const timer=(timerMatches(state.timer,kind,habitId,context)?state.timer:state.timerArchive.find(t=>timerMatches(t,kind,habitId,context)))??null;const remaining=timer?(timer.running&&timer.deadline?remainingSeconds(timer.deadline,now):timer.remaining):Math.round(minutes*60);const total=timer?.total??Math.round(minutes*60),finished=!!timer&&remaining===0,elapsed=total-remaining,phase=Math.floor(elapsed/4)%2===0?'Nefes al':'Nefes ver';
- useEffect(()=>{const i=setInterval(()=>setNow(Date.now()),200);return()=>clearInterval(i)},[]);
+import { useEffect, useRef, useState } from "react";
+import { Play, Pause, RotateCcw, Bell } from "lucide-react";
+import { unlockTimerSound } from "../platform/timer";
+import { useStore } from "../app/Store";
+import { localDate } from "../domain/dates";
+import { remainingSeconds } from "../domain/sessions";
+import {
+  timerMatches,
+  switchTimer,
+  resetTimer,
+  findTimer,
+} from "../domain/timers";
+import type { HabitId, TimerState } from "../domain/types";
+import { Button } from "./UI";
+export function Timer({
+  kind,
+  minutes,
+  habitId,
+  topic = "",
+  context = "",
+  onComplete,
+  breathing = false,
+  onStart,
+  sessionId,
+}: {
+  kind: TimerState["kind"];
+  minutes: number;
+  habitId?: HabitId;
+  topic?: string;
+  context?: string;
+  onComplete: (timer: TimerState) => Promise<boolean>;
+  breathing?: boolean;
+  onStart?: () => void;
+  sessionId?: string;
+}) {
+  const { state, update } = useStore(),
+    [now, setNow] = useState(Date.now()),
+    [busy, setBusy] = useState(false),
+    saving = useRef(false),
+    acting = useRef(false),
+    [selectedId, setSelectedId] = useState(sessionId);
+  const timer =
+    findTimer(state, kind, habitId, context, selectedId) ??
+    findTimer(state, kind, habitId, context);
+  const remaining = timer
+    ? timer.running && timer.deadline
+      ? remainingSeconds(timer.deadline, now)
+      : timer.remaining
+    : Math.round(minutes * 60);
+  const total = timer?.total ?? Math.round(minutes * 60),
+    finished = !!timer && remaining === 0,
+    elapsed = total - remaining,
+    phase = Math.floor(elapsed / 4) % 2 === 0 ? "Nefes al" : "Nefes ver";
+  useEffect(() => {
+    const i = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(i);
+  }, []);
 
- const start=async()=>{unlockTimerSound(state.settings.sound);const n=Date.now();setNow(n);await update(s=>{const old=(timerMatches(s.timer,kind,habitId,context)?s.timer:s.timerArchive.find(t=>timerMatches(t,kind,habitId,context)))??null;const resume=old&&!old.saved?old:null;const rem=resume?.remaining??Math.round(minutes*60);const next:TimerState=resume?{...resume,running:true,deadline:n+rem*1000}:{id:crypto.randomUUID(),kind,habitId,context,total:Math.round(minutes*60),remaining:Math.round(minutes*60),running:true,deadline:n+Math.round(minutes*60)*1000,saved:false,topic,date:localDate()};return switchTimer(s,next,n)})};
- const pause=()=>update(s=>s.timer?.id===timer?.id?{...s,timer:{...s.timer!,remaining:s.timer!.deadline?remainingSeconds(s.timer!.deadline,Date.now()):s.timer!.remaining,running:false,deadline:null}}:s);
- const reset=()=>{if(!timer||timer.saved||window.confirm('Bu oturumu sıfırlamak ister misin? Kaydedilmiş verilerin korunur.'))void update(s=>resetTimer(s,kind,habitId,context))};
- const save=async()=>{if(!timer||saving.current||timer.saved)return;saving.current=true;setBusy(true);try{if(await onComplete({...timer,remaining})){await update(s=>s.timer?.id===timer.id?{...s,timer:{...s.timer,saved:true,running:false,deadline:null,remaining}}:{...s,timerArchive:s.timerArchive.map(t=>t.id===timer.id?{...t,saved:true,running:false,deadline:null,remaining}:t)})}}finally{saving.current=false;setBusy(false)}};
- return <div className="timer-panel">{breathing?<div className={`breath-orbit ${timer?.running?'active':''}`}><div className="breath-circle"><span>{timer?.running?phase:'Kendi ritminde'}</span><small>4 saniye al · 4 saniye ver</small></div></div>:<div className="timer-dial" style={{'--angle':`${(1-remaining/total)*360}deg`} as React.CSSProperties}><div><span className="timer-digits">{String(Math.floor(remaining/60)).padStart(2,'0')}<em>:</em>{String(remaining%60).padStart(2,'0')}</span><small>{kind==='study'?'ODAK ZAMANI':kind==='delay'?'İSTEĞE BİR MOLA':'KENDİNE ZAMAN'}</small></div></div>}{breathing&&<p className="breath-time">{Math.floor(remaining/60)}:{String(remaining%60).padStart(2,'0')} kaldı</p>}{timer?.saved?<><p className="success-note">Oturum kaydedildi. Bugünkü küçük adımın burada.</p><Button variant="secondary" onClick={reset}>Yeni oturum</Button></>:finished?<><p className="success-note"><Bell size={16}/> Süre tamamlandı.</p><Button disabled={busy} onClick={()=>void save()}>Tamamladım, kaydet</Button></>:<div className="timer-actions"><Button onClick={()=>void (timer?.running?pause():start())}>{timer?.running?<Pause size={18}/>:<Play size={18}/>} {timer?.running?'Duraklat':timer?'Devam et':'Başlat'}</Button><button className="icon-button" onClick={reset} aria-label="Zamanlayıcıyı sıfırla"><RotateCcw size={19}/></button></div>}{timer&&!timer.saved&&elapsed>=30&&!finished&&<button className="text-button" disabled={busy} onClick={()=>void save()}>Burada bitir · {Math.floor(elapsed/60)} dk {elapsed%60} sn kaydet</button>}{state.timer&&state.timer.id!==timer?.id&&!state.timer.saved&&<p className="help">Başlattığında diğer oturum duraklatılır ve korunur. Kendi ekranından devam edebilirsin.</p>}</div>}
+  const start = async () => {
+    if (acting.current) return;
+    acting.current = true;
+    setBusy(true);
+    try {
+      unlockTimerSound(state.settings.sound);
+      const n = Date.now();
+      setNow(n);
+      const ok = await update((s) => {
+        const old =
+          findTimer(s, kind, habitId, context, selectedId) ??
+          findTimer(s, kind, habitId, context);
+        const resume = old && !old.saved ? old : null;
+        const rem = resume
+          ? resume.running && resume.deadline
+            ? remainingSeconds(resume.deadline, n)
+            : resume.remaining
+          : Math.round(minutes * 60);
+        const next: TimerState = resume
+          ? { ...resume, running: true, deadline: n + rem * 1000 }
+          : {
+              id: crypto.randomUUID(),
+              kind,
+              habitId,
+              context,
+              total: Math.round(minutes * 60),
+              remaining: Math.round(minutes * 60),
+              running: true,
+              deadline: n + Math.round(minutes * 60) * 1000,
+              saved: false,
+              topic,
+              date: localDate(),
+            };
+        return switchTimer(s, next, n);
+      });
+      if (ok) onStart?.();
+    } finally {
+      acting.current = false;
+      setBusy(false);
+    }
+  };
+  const pause = () =>
+    update((s) =>
+      s.timer?.id === timer?.id
+        ? {
+            ...s,
+            timer: {
+              ...s.timer!,
+              remaining: s.timer!.deadline
+                ? remainingSeconds(s.timer!.deadline, Date.now())
+                : s.timer!.remaining,
+              running: false,
+              deadline: null,
+            },
+          }
+        : s,
+    );
+  const reset = () => {
+    if (
+      !timer ||
+      timer.saved ||
+      window.confirm(
+        "Bu oturumu sıfırlamak ister misin? Kaydedilmiş verilerin korunur.",
+      )
+    )
+      void update((s) => resetTimer(s, kind, habitId, context)).then((ok) => {
+        if (ok) setSelectedId(undefined);
+      });
+  };
+  const save = async () => {
+    if (!timer || saving.current || timer.saved) return;
+    saving.current = true;
+    setBusy(true);
+    try {
+      if (await onComplete({ ...timer, remaining })) {
+        await update((s) =>
+          s.timer?.id === timer.id
+            ? {
+                ...s,
+                timer: {
+                  ...s.timer,
+                  saved: true,
+                  running: false,
+                  deadline: null,
+                  remaining,
+                },
+              }
+            : {
+                ...s,
+                timerArchive: s.timerArchive.map((t) =>
+                  t.id === timer.id
+                    ? {
+                        ...t,
+                        saved: true,
+                        running: false,
+                        deadline: null,
+                        remaining,
+                      }
+                    : t,
+                ),
+              },
+        );
+      }
+    } finally {
+      saving.current = false;
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="timer-panel">
+      {breathing ? (
+        <div className={`breath-orbit ${timer?.running ? "active" : ""}`}>
+          <div className="breath-circle">
+            <span>{timer?.running ? phase : "Kendi ritminde"}</span>
+            <small>4 saniye al · 4 saniye ver</small>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="timer-dial"
+          style={
+            {
+              "--angle": `${(1 - remaining / total) * 360}deg`,
+            } as React.CSSProperties
+          }
+        >
+          <div>
+            <span className="timer-digits">
+              {String(Math.floor(remaining / 60)).padStart(2, "0")}
+              <em>:</em>
+              {String(remaining % 60).padStart(2, "0")}
+            </span>
+            <small>
+              {kind === "study"
+                ? "ODAK ZAMANI"
+                : kind === "delay"
+                  ? "İSTEĞE BİR MOLA"
+                  : "KENDİNE ZAMAN"}
+            </small>
+          </div>
+        </div>
+      )}
+      {breathing && (
+        <p className="breath-time">
+          {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}{" "}
+          kaldı
+        </p>
+      )}
+      {timer?.saved ? (
+        <>
+          <p className="success-note">
+            Oturum kaydedildi. Bugünkü küçük adımın burada.
+          </p>
+          <Button variant="secondary" onClick={reset}>
+            Yeni oturum
+          </Button>
+        </>
+      ) : finished ? (
+        <>
+          <p className="success-note">
+            <Bell size={16} /> Süre tamamlandı.
+          </p>
+          <Button disabled={busy} onClick={() => void save()}>
+            Tamamladım, kaydet
+          </Button>
+        </>
+      ) : (
+        <div className="timer-actions">
+          <Button
+            disabled={busy}
+            onClick={() => void (timer?.running ? pause() : start())}
+          >
+            {timer?.running ? <Pause size={18} /> : <Play size={18} />}{" "}
+            {timer?.running ? "Duraklat" : timer ? "Devam et" : "Başlat"}
+          </Button>
+          <button
+            className="icon-button"
+            onClick={reset}
+            aria-label="Zamanlayıcıyı sıfırla"
+          >
+            <RotateCcw size={19} />
+          </button>
+        </div>
+      )}
+      {timer && !timer.saved && elapsed >= 30 && !finished && (
+        <button
+          className="text-button"
+          disabled={busy}
+          onClick={() => void save()}
+        >
+          Burada bitir · {Math.floor(elapsed / 60)} dk {elapsed % 60} sn kaydet
+        </button>
+      )}
+      {state.timer && state.timer.id !== timer?.id && !state.timer.saved && (
+        <p className="help">
+          Başlattığında diğer oturum duraklatılır ve korunur. Kendi ekranından
+          devam edebilirsin.
+        </p>
+      )}
+    </div>
+  );
+}

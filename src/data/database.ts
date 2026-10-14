@@ -3,7 +3,7 @@ import { stateSchema, type AppState } from "../domain/types";
 import { createInitialState } from "../domain/defaults";
 import { reconcileTasks, snapshotTaskTargets } from "../domain/tasks";
 let connection: Promise<IDBPDatabase> | null = null;
-function db() {
+export function getDatabase() {
   if (!connection)
     connection = openDB("aliskan-local", 1, {
       upgrade(database) {
@@ -23,7 +23,7 @@ function db() {
   return connection;
 }
 export async function loadState(): Promise<AppState> {
-  const database = await db();
+  const database = await getDatabase();
   const raw = await database.get("app", "state");
   return raw === undefined
     ? createInitialState()
@@ -37,7 +37,7 @@ export async function saveState(state: AppState): Promise<void> {
 export async function mutateState(
   change: (state: AppState) => AppState,
 ): Promise<AppState> {
-  const database = await db(),
+  const database = await getDatabase(),
     tx = database.transaction("app", "readwrite");
   try {
     const raw = await tx.store.get("state");

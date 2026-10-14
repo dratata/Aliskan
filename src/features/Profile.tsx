@@ -13,17 +13,15 @@ import {
 import { useStore } from "../app/Store";
 import { useRecordDraft } from "../app/useRecordDraft";
 import { Button, Field, Card, Modal } from "../components/UI";
-import {
-  downloadBackup,
-  validateBackup,
-  mergeStates,
-  previewMerge,
-} from "../data/backup";
+import { validateBackup, mergeStates, previewMerge } from "../data/backup";
 import { History } from "./History";
 import { requestNotifications } from "../platform/notifications";
 import type { AppState } from "../domain/types";
+import { useBackupInfo } from "../platform/backup";
+import { StorageSafety } from "./StorageSafety";
 export function Profile() {
-  const { state, update } = useStore();
+  const { state, update } = useStore(),
+    backup = useBackupInfo();
   const profileDraft = useRecordDraft(state.profile),
     settingsDraft = useRecordDraft(state.settings);
   const profile = profileDraft.value,
@@ -391,13 +389,30 @@ export function Profile() {
       </Card>
       <Card>
         <h3>Verilerin sende</h3>
+        {backup.ready && !backup.error && (
+          <p role="status">
+            {backup.info.preparedAt
+              ? `Son yedek hazırlanma: ${new Date(backup.info.preparedAt).toLocaleString("tr-TR")} · ${backup.info.records} kayıt.`
+              : "Henüz yedek hazırlamadın."}
+          </p>
+        )}
+        {backup.error && <p role="alert">{backup.error}</p>}
+        <p className="help">
+          Bu bilgi dosyanın hazırlandığını gösterir. Gerçek dosyayı
+          İndirilenler’de kontrol et.
+        </p>
+        <StorageSafety />
         <p>
           Tarayıcı verileri silinirse yerel kayıtlar kaybolabilir. Düzenli yedek
           al. JSON dosyası sağlık ve ruh hali bilgilerini de içerir; güvenli bir
           yerde sakla.
         </p>
         <div className="button-row">
-          <Button variant="secondary" onClick={() => downloadBackup(state)}>
+          <Button
+            variant="secondary"
+            disabled={backup.busy}
+            onClick={() => void backup.prepare(state)}
+          >
             <Download size={17} /> JSON yedek al
           </Button>
           <label className="button secondary upload-button">
@@ -469,9 +484,9 @@ export function Profile() {
             </p>
             <Button
               variant="secondary"
-              onClick={() => {
-                downloadBackup(state);
-                setBackupDone(true);
+              disabled={backup.busy}
+              onClick={async () => {
+                if (await backup.prepare(state)) setBackupDone(true);
               }}
             >
               Önce mevcut yedeği indir
