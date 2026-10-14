@@ -40,4 +40,6 @@ Yaşa uygun oyunların kaynak bağlamı için [UNICEF oyun önerileri](https://w
 
 ## Çevrimdışı ve mobil davranış
 
-Uygulama kabuğu, kod ve SVG şemaları ilk kurulumda önbelleğe alınır. Büyük PNG rehberler ilk açılışta topluca indirilmez; görüntülendiklerinde saklanır. Önceden açılmamış bir görsel çevrimdışıyken SVG şemayla devam eder. Harici videolar internet gerektirir. Kaynak bağlantıları sonradan değişebilir; kontrol tarihi arayüzde gösterilir.
+Uygulama kabuğu, kod ve SVG şemaları ilk kurulumda önbelleğe alınır. Optimize WebP rehberler ilk açılışta topluca indirilmez; görüntülendiklerinde saklanır. Önceden açılmamış bir görsel çevrimdışıyken SVG şemayla devam eder. Harici videolar internet gerektirir. Kaynak bağlantıları sonradan değişebilir; kontrol tarihi arayüzde gösterilir.
+
+14 Ekim iyileştirmesi: aynı dokuz PNG’den WebP (kalite 82) kopyaları üretildi; çizimler değiştirilmedi, PNG özgünler korunur. Aktif rehberlerin toplam indirme boyutu yaklaşık 19 MB → 1,2 MB oldu.

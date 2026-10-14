@@ -1,16 +1,210 @@
-import {eventSchema,timeSchema,type AppState,type EntryDraft,type HabitEvent} from './types';
-import {localDate,shiftDate,sleepMinutes} from './dates';
-const words:Record<string,number>={'sıfır':0,'bir':1,'iki':2,'üç':3,'dört':4,'beş':5,'altı':6,'yedi':7,'sekiz':8,'dokuz':9,'on':10,'on bir':11,'on iki':12,'on beş':15,'yirmi':20,'otuz':30,'kırk':40,'elli':50,'altmış':60};
-const numberPattern='(\\d+(?:[.,]\\d+)?|on beş|on iki|on bir|yirmi|otuz|kırk|elli|altmış|sıfır|bir|iki|üç|dört|beş|altı|yedi|sekiz|dokuz|on)';
-function number(v:string){return words[v]??Number(v.replace(',','.'))}
-function parseClock(part:string,night=false):string|null{const m=part.match(/(\d{1,2}):([0-5]\d)/);if(m){const h=Number(m[1]);return h<=23?`${String(h).padStart(2,'0')}:${m[2]}`:null}const n=part.match(new RegExp(numberPattern+'(?:de|da|te|ta)?'));if(!n)return null;let h=number(n[1]);if(!Number.isInteger(h)||h>23)return null;if(night&&h>=6&&h<=11)h+=12;return `${String(h).padStart(2,'0')}:00`}
-export function parseEntry(text:string,now=new Date()):EntryDraft|null {const t=text.toLocaleLowerCase('tr-TR').trim().replace(/ı̇/g,'i');const date=/dün/.test(t)?shiftDate(localDate(now),-1):localDate(now);const draft=(type:EntryDraft['type'],value:number,data:EntryDraft['data']={},message='Tarih ve miktarı kontrol edip onayla.'):EntryDraft=>({type,value,date,data,needsConfirmation:true,message});const duration=t.match(new RegExp(numberPattern+'\\s*(?:dakika|dk)'));const minutes=duration?number(duration[1]):null;
- if(/sigara/.test(t)&&/(iç|adet|tane)/.test(t)){const m=t.match(new RegExp(numberPattern+'\\s*(?:adet\\s*|tane\\s*)?sigara'));if(!m)return null;const n=number(m[1]);return Number.isInteger(n)&&n>=0&&n<=100?draft('smoking',n,{cumulative:true},'Bu ifade günlük toplam kabul edilir. Mevcut kayıtlara yalnız eksik miktar eklenir.'):null}
- if(/(?:yat|uyu)/.test(t)&&/(?:kalk|uyan)/.test(t)){const segments=t.split(/[,;]|sabah/);const asleep=parseClock(segments[0],/gece|akşam/.test(segments[0]));const wake=parseClock(segments.slice(1).join(' '));if(!asleep||!wake)return null;const value=sleepMinutes(asleep,wake);if(value<=0||value>1080)return null;const d=draft('sleep',value,{bed:asleep,asleep,wake},'Saatleri doğrula. Yatış uykuya dalış tahmini sayıldı; kayıt uyandığın güne aittir.');if(/dün gece/.test(t))d.date=localDate(now);return d}
- if(/ders|çalış/.test(t)&&minutes!==null&&minutes>0&&minutes<=240)return draft('study',minutes,{topic:'Sesli / metin kaydı'});
- if(/egzersiz|spor/.test(t)&&/(yap|tamam)/.test(t)){if(minutes!==null&&(minutes<=0||minutes>120))return null;return draft('exercise',minutes??5,{habitId:/akşam/.test(t)?'exerciseEvening':'exerciseLunch',effort:3,pain:false,...(minutes===null?{assumedDuration:true}:{})},minutes===null?'Süre belirtilmedi: başlangıç hedefi varsayıldı. Süre ve zorlanmayı doğrula.':'Süre ve zorlanmayı doğrula.')}
- if(/kız|çocu|oyun/.test(t)&&minutes!==null&&minutes>0&&minutes<=180)return draft('family',minutes,{activityName:'Birlikte serbest oyun',feedback:'done'});
- if(/su/.test(t)){const ml=t.match(new RegExp(numberPattern+'\\s*ml'));const glasses=t.match(new RegExp(numberPattern+'\\s*bardak'));const v=ml?number(ml[1]):glasses?number(glasses[1])*250:null;if(v!==null&&v>0&&v<=5000)return draft('water',v,{},glasses?'Bir bardak 250 ml kabul edildi. Miktarı doğrula.':'Miktarı doğrula.')}
- if(/kilo|kg/.test(t)){const m=t.match(new RegExp(numberPattern+'\\s*(?:kilo|kg)'));if(m){const v=number(m[1]);if(v>=20&&v<=400)return draft('weight',v)}}
- return null}
-export function confirmDraft(draft:EntryDraft,state:AppState,source:HabitEvent['source'],now=new Date()):HabitEvent {let value=draft.value;const limits:Partial<Record<EntryDraft['type'],number>>={study:240,exercise:120,family:180,water:5000,weight:400,smoking:100,sleep:1080};if(!Number.isFinite(value)||value<0||value>(limits[draft.type]??10000)||(draft.type!=='smoking'&&value===0))throw new Error('Kayıt miktarını kontrol et.');if(draft.type==='sleep'){const start=timeSchema.parse(draft.data.asleep),end=timeSchema.parse(draft.data.wake);value=sleepMinutes(start,end);if(value<=0||value>1080)throw new Error('Uyku saatlerini kontrol et.');}if(draft.type==='smoking'&&draft.data.cumulative){const recorded=state.events.filter(e=>e.type==='smoking'&&e.date===draft.date).reduce((a,e)=>a+e.value,0);if(value<recorded)throw new Error(`Bu gün için ${recorded} sigara kayıtlı. Daha düşük toplam için Sigara ekranındaki kayıtları düzenle.`);value-=recorded}return eventSchema.parse({id:crypto.randomUUID(),type:draft.type,value,date:draft.date,at:now.toISOString(),source,data:{...draft.data,reportedTotal:draft.value}})}
+import {
+  eventSchema,
+  timeSchema,
+  type AppState,
+  type EntryDraft,
+  type HabitEvent,
+} from "./types";
+import { localDate, shiftDate, sleepMinutes } from "./dates";
+const words: Record<string, number> = {
+  sıfır: 0,
+  bir: 1,
+  iki: 2,
+  üç: 3,
+  dört: 4,
+  beş: 5,
+  altı: 6,
+  yedi: 7,
+  sekiz: 8,
+  dokuz: 9,
+  on: 10,
+  "on bir": 11,
+  "on iki": 12,
+  "on beş": 15,
+  yirmi: 20,
+  otuz: 30,
+  kırk: 40,
+  elli: 50,
+  altmış: 60,
+};
+const numberPattern =
+  "(\\d+(?:[.,]\\d+)?|on beş|on iki|on bir|yirmi|otuz|kırk|elli|altmış|sıfır|bir|iki|üç|dört|beş|altı|yedi|sekiz|dokuz|on)";
+function number(v: string) {
+  return words[v] ?? Number(v.replace(",", "."));
+}
+function parseClock(part: string, night = false): string | null {
+  const m = part.match(/(\d{1,2}):([0-5]\d)/);
+  if (m) {
+    const h = Number(m[1]);
+    return h <= 23 ? `${String(h).padStart(2, "0")}:${m[2]}` : null;
+  }
+  const n = part.match(new RegExp(numberPattern + "(?:de|da|te|ta)?"));
+  if (!n) return null;
+  let h = number(n[1]);
+  if (!Number.isInteger(h) || h > 23) return null;
+  if (night && h >= 6 && h <= 11) h += 12;
+  return `${String(h).padStart(2, "0")}:00`;
+}
+export function parseEntry(text: string, now = new Date()): EntryDraft | null {
+  const t = text.toLocaleLowerCase("tr-TR").trim().replace(/ı̇/g, "i"); // Only completed positive statements and today/yesterday are supported.
+  if (
+    /(?:iç|çalış|yap|oyna|uyu|yat|kalk|uyan)(?:(?:ma|me|ama|eme)(?:d|z|mış|miş)|m[ıiuü]yor|am[ıiuü]yor|em[ıiuü]yor)/.test(
+      t,
+    ) ||
+    /yarın|geçen|önceki|evvel|hafta|(?:\d+\s*gün\s*önce)|(?:\d{1,2}[./-]\d{1,2}[./-]\d{2,4})|pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar|(?:acağ|eceğ|acak|ecek)/.test(
+      t,
+    )
+  )
+    return null;
+  const date = /dün/.test(t) ? shiftDate(localDate(now), -1) : localDate(now);
+  const draft = (
+    type: EntryDraft["type"],
+    value: number,
+    data: EntryDraft["data"] = {},
+    message = "Tarih ve miktarı kontrol edip onayla.",
+  ): EntryDraft => ({
+    type,
+    value,
+    date,
+    data,
+    needsConfirmation: true,
+    message,
+  });
+  const duration = t.match(new RegExp(numberPattern + "\\s*(?:dakika|dk)"));
+  const minutes = duration ? number(duration[1]) : null;
+  if (/sigara/.test(t) && /(iç|adet|tane)/.test(t)) {
+    const m = t.match(
+      new RegExp(numberPattern + "\\s*(?:adet\\s*|tane\\s*)?sigara"),
+    );
+    if (!m) return null;
+    const n = number(m[1]);
+    return Number.isInteger(n) && n >= 0 && n <= 100
+      ? draft(
+          "smoking",
+          n,
+          { cumulative: true },
+          "Bu ifade günlük toplam kabul edilir. Mevcut kayıtlara yalnız eksik miktar eklenir.",
+        )
+      : null;
+  }
+  if (/(?:yat|uyu)/.test(t) && /(?:kalk|uyan)/.test(t)) {
+    const segments = t.split(/[,;]|sabah/);
+    const asleep = parseClock(segments[0], /gece|akşam/.test(segments[0]));
+    const wake = parseClock(segments.slice(1).join(" "));
+    if (!asleep || !wake) return null;
+    const value = sleepMinutes(asleep, wake);
+    if (value <= 0 || value > 1080) return null;
+    const d = draft(
+      "sleep",
+      value,
+      { bed: asleep, asleep, wake },
+      "Saatleri doğrula. Yatış uykuya dalış tahmini sayıldı; kayıt uyandığın güne aittir.",
+    );
+    if (/dün gece/.test(t)) d.date = localDate(now);
+    return d;
+  }
+  if (/ders|çalış/.test(t) && minutes !== null && minutes > 0 && minutes <= 240)
+    return draft("study", minutes, { topic: "Sesli / metin kaydı" });
+  if (/egzersiz|spor/.test(t) && /(yap|tamam)/.test(t)) {
+    if (minutes !== null && (minutes <= 0 || minutes > 120)) return null;
+    return draft(
+      "exercise",
+      minutes ?? 5,
+      {
+        habitId: /akşam/.test(t) ? "exerciseEvening" : "exerciseLunch",
+        effort: 3,
+        pain: false,
+        ...(minutes === null ? { assumedDuration: true } : {}),
+      },
+      minutes === null
+        ? "Süre belirtilmedi: başlangıç hedefi varsayıldı. Süre ve zorlanmayı doğrula."
+        : "Süre ve zorlanmayı doğrula.",
+    );
+  }
+  if (
+    /kız|çocu|oyun/.test(t) &&
+    minutes !== null &&
+    minutes > 0 &&
+    minutes <= 180
+  )
+    return draft("family", minutes, {
+      activityName: "Birlikte serbest oyun",
+      feedback: "done",
+    });
+  if (/su/.test(t)) {
+    const ml = t.match(new RegExp(numberPattern + "\\s*ml"));
+    const glasses = t.match(new RegExp(numberPattern + "\\s*bardak"));
+    const v = ml ? number(ml[1]) : glasses ? number(glasses[1]) * 250 : null;
+    if (v !== null && v > 0 && v <= 5000)
+      return draft(
+        "water",
+        v,
+        {},
+        glasses
+          ? "Bir bardak 250 ml kabul edildi. Miktarı doğrula."
+          : "Miktarı doğrula.",
+      );
+  }
+  if (/kilo|kg/.test(t)) {
+    const m = t.match(new RegExp(numberPattern + "\\s*(?:kilo|kg)"));
+    if (m) {
+      const v = number(m[1]);
+      if (v >= 20 && v <= 400) return draft("weight", v);
+    }
+  }
+  return null;
+}
+export function confirmDraft(
+  draft: EntryDraft,
+  state: AppState,
+  source: HabitEvent["source"],
+  now = new Date(),
+): HabitEvent {
+  if (draft.date > localDate(now))
+    throw new Error(
+      "Gelecekteki bir güne gerçekleşmiş kayıt yazılamaz. Kayıt gününü kontrol et.",
+    );
+  let value = draft.value;
+  const limits: Partial<Record<EntryDraft["type"], number>> = {
+    study: 240,
+    exercise: 120,
+    family: 180,
+    water: 5000,
+    weight: 400,
+    smoking: 100,
+    sleep: 1080,
+  };
+  if (
+    !Number.isFinite(value) ||
+    value < 0 ||
+    value > (limits[draft.type] ?? 10000) ||
+    (draft.type !== "smoking" && value === 0)
+  )
+    throw new Error("Kayıt miktarını kontrol et.");
+  if (draft.type === "sleep") {
+    const start = timeSchema.parse(draft.data.asleep),
+      end = timeSchema.parse(draft.data.wake);
+    value = sleepMinutes(start, end);
+    if (value <= 0 || value > 1080)
+      throw new Error("Uyku saatlerini kontrol et.");
+  }
+  if (draft.type === "smoking" && draft.data.cumulative) {
+    const recorded = state.events
+      .filter((e) => e.type === "smoking" && e.date === draft.date)
+      .reduce((a, e) => a + e.value, 0);
+    if (value < recorded)
+      throw new Error(
+        `Bu gün için ${recorded} sigara kayıtlı. Daha düşük toplam için Sigara ekranındaki kayıtları düzenle.`,
+      );
+    value -= recorded;
+  }
+  return eventSchema.parse({
+    id: crypto.randomUUID(),
+    type: draft.type,
+    value,
+    date: draft.date,
+    at: now.toISOString(),
+    source,
+    data: { ...draft.data, reportedTotal: draft.value },
+  });
+}

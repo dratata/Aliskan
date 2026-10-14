@@ -1,6 +1,61 @@
-import {openDB} from 'idb';
-import {stateSchema,type AppState} from '../domain/types';
-import {createInitialState} from '../domain/defaults';
-const db=()=>openDB('aliskan-local',1,{upgrade(database){database.createObjectStore('app')}});
-export async function loadState():Promise<AppState>{const database=await db();const raw=await database.get('app','state');return raw===undefined?createInitialState():stateSchema.parse(raw)}
-export async function saveState(state:AppState):Promise<void>{const parsed=stateSchema.parse(state);const database=await db();const tx=database.transaction('app','readwrite');await tx.store.put(parsed,'state');await tx.done}
+import { openDB, type IDBPDatabase } from "idb";
+import { stateSchema, type AppState } from "../domain/types";
+import { createInitialState } from "../domain/defaults";
+import { reconcileTasks, snapshotTaskTargets } from "../domain/tasks";
+let connection: Promise<IDBPDatabase> | null = null;
+function db() {
+  if (!connection)
+    connection = openDB("aliskan-local", 1, {
+      upgrade(database) {
+        database.createObjectStore("app");
+      },
+      blocking() {
+        connection?.then((d) => d.close());
+        connection = null;
+      },
+      terminated() {
+        connection = null;
+      },
+    }).catch((error) => {
+      connection = null;
+      throw error;
+    });
+  return connection;
+}
+export async function loadState(): Promise<AppState> {
+  const database = await db();
+  const raw = await database.get("app", "state");
+  return raw === undefined
+    ? createInitialState()
+    : snapshotTaskTargets(stateSchema.parse(raw));
+}
+export async function saveState(state: AppState): Promise<void> {
+  await mutateState(() => state);
+}
+// IndexedDB serializes readwrite transactions across tabs. Read and write in
+// the same transaction so a stale UI snapshot can never replace newer records.
+export async function mutateState(
+  change: (state: AppState) => AppState,
+): Promise<AppState> {
+  const database = await db(),
+    tx = database.transaction("app", "readwrite");
+  try {
+    const raw = await tx.store.get("state");
+    const current =
+      raw === undefined
+        ? createInitialState()
+        : snapshotTaskTargets(stateSchema.parse(raw));
+    const next = stateSchema.parse(reconcileTasks(change(current)));
+    await tx.store.put(next, "state");
+    await tx.done;
+    return next;
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* transaction already completed */
+    }
+    await tx.done.catch(() => {});
+    throw error;
+  }
+}

@@ -21,6 +21,8 @@ npm run test:e2e
 npm run preview
 ```
 
+Canlı uygulama: https://aliskan-eight.vercel.app
+
 Vercel: `dratata/Aliskan` deposunu içe aktar, framework Vite, build `npm run build`, çıktı `dist`. API anahtarı veya ortam değişkeni gerekmez. Projenin sabit URL'sini kullan; farklı preview URL'leri ayrı yerel veri alanlarıdır.
 
 ## İlk kullanım
@@ -69,3 +71,7 @@ Aşamalar ve test sonuçları: [docs/PROGRESS.md](docs/PROGRESS.md).
 Hareketlerde üç aşamalı özgün görseller, seçilebilir/otomatik ilerleyen adımlar ve teknik kontrol noktaları bulunur. 60 oyunda etkinliğe özgü SVG sahnesi ve örnek ebeveyn cümleleri vardır. Öğrenme gösterimi kayıt oluşturmaz; gerçek oturum zamanlayıcısı ayrıdır. İsteğe bağlı Türkçe seslendirme tarayıcı desteğine bağlıdır.
 
 NHS, Oxford University Hospitals, Physitrack, CDC ve HeadStart kaynaklarıyla video örnekleri seçildi. Kaynak sayfası kullanıcı seçimiyle açılır; videolar internet gerektirir. Büyük resimler açıldığında önbelleğe alınır; yüklenmeyen resmin yerine adım şeması gösterilir. [Kaynaklar ve görsel inceleme](docs/GUIDE-SOURCES.md).
+
+## Güvenilirlik ve kullanım iyileştirmeleri
+
+Aynı tarayıcıdaki sekmeler kayıtlarını IndexedDB transaction ile birleştirir ve eşitler. Günlük işaretler geri alınabilir; eski tamamlamalar yeni hedeflerden etkilenmez. Kısa Pomodoro denemeleri gerçek net dakika kadar planı ilerletir. Egzersizde süre kullanıcı tarafından doğrulanır; mola sayacı vardır. Kayıt geçmişi sayfalanır, haftalık hedef gelişimde görünür. Mobil geri hareketi rehberi kapatır. Ayrıntılı tarama: [docs/AUDIT-2026-10-14.md](docs/AUDIT-2026-10-14.md).

@@ -51,3 +51,13 @@ Kullanıcının yeni yönlendirmesiyle rehberler genişletildi: dokuz özgün ü
 Yeni veri/rehber testleriyle toplam 41 test geçti. Mobil senaryolar 19'a çıktı; adım değişimi, örnek konuşma, kaynak bağlantısı, gösterimin kayıt yaratmaması ve çevrimdışı şema senaryoları geçti. Üretim derlemesi başarılı. Büyük rehber PNG'leri ilk açılışta topluca indirilmez; açıldığında önbelleğe alınır. İnternet yoksa hareket/oyun SVG şemaları kullanılır. Kod React ve doğrulama chunk'larına ayrılarak ilk uygulama chunk'ı yaklaşık 204 kB'ye indirildi.
 
 Mevcut kullanıcı veri şeması ve kayıtlar korunur. Canlı Vercel yayını önceki hesap yetkilendirmesi engeline bağlıdır; bu çalışma canlı yayın yapılmış gibi raporlanmaz.
+
+## 14 Ekim — Canlı yayın ve iyileştirme taraması
+
+Vercel cihaz yetkilendirmesi tamamlandı. Aliskan GitHub deposuna bağlıdır; üretim adresi https://aliskan-eight.vercel.app. Önceki yetkilendirme engeli çözüldü.
+
+Tarama ve gerekçeler: AUDIT-2026-10-14.md. Aynı IndexedDB transaction içinde okuma/değiştirme/yazma, sekmeler arasında eşitleme, eski tamamlamalarda hedef koruma, net süreye göre Pomodoro planı, egzersizde onaylı gerçek süre ve mola rehberi, işareti geri alma, mobil geri hareketi/odak yönetimi, geçmiş sayfalama, haftalık hedef ve dönem kapsamlı sigara arası, daha güvenli Türkçe giriş eklendi. PWA görünür olduğunda ve saatte bir güncelleme arar; uygulama seçimi kullanıcıdadır.
+
+Dokuz rehberin WebP kopyaları yaklaşık 1,2 MB; PNG özgünler korunur (yaklaşık 19 MB). Uygulama WebP kullanır; çevrimdışı SVG alternatifi sürer.
+
+Doğrulama: 48 domain/veri testi ve 26 mobil Playwright senaryosu başarılı. Üretim derlemesi başarılı. İki sekme kayıt koruma, kısa deneme, egzersiz süresi, geri hareketi, 105 kayıt sayfalama ve haftalık hedef için yeni regresyonlar eklendi. Genel dil anlayışı, kapalı uygulama push ve bulut senkronizasyonu bu taramanın kapsamı dışındadır; fiziksel iPhone kontrolü açık kalır.
