@@ -1,9 +1,503 @@
-import {useState} from 'react';
-import {User,Download,Upload,ShieldCheck,Bell,Smartphone,Check,Sun,Moon} from 'lucide-react';
-import {useStore} from '../app/Store';
-import {Button,Field,Card,Modal} from '../components/UI';
-import {downloadBackup,validateBackup,mergeStates} from '../data/backup';
-import {History} from './History';
-import {requestNotifications} from '../platform/notifications';
-import type {AppState} from '../domain/types';
-export function Profile(){const {state,update}=useStore(),[profile,setProfile]=useState(state.profile),[settings,setSettings]=useState(state.settings),[message,setMessage]=useState(''),[incoming,setIncoming]=useState<AppState|null>(null),[mode,setMode]=useState('merge'),[history,setHistory]=useState(false),[backupDone,setBackupDone]=useState(false);const numeric=(key:'age'|'height'|'weight'|'goalWeight'|'childAge',label:string,max:number)=><Field label={label}><input type="number" min="0" max={max} step={key==='weight'||key==='goalWeight'?'0.1':'1'} value={profile[key]??''} onChange={e=>setProfile({...profile,[key]:e.target.value===''?null:Number(e.target.value)})}/></Field>;const upload=async(file?:File)=>{if(!file)return;try{setIncoming(validateBackup(JSON.parse(await file.text())));setBackupDone(false)}catch{setMessage('Yedek şeması veya sürümü desteklenmiyor. Mevcut kayıtlarına dokunulmadı.')}};return <><div className="page-heading"><span className="eyebrow">SENİN HAYATIN, SENİN RİTMİN</span><h1>Profilin</h1><p>Hedeflerini hayatına uydur. Her şey değişebilir.</p></div><Card className="profile-summary"><span className="avatar large">{state.profile.name?state.profile.name[0].toLocaleUpperCase('tr-TR'):<User/>}</span><div><h2>{state.profile.name||'Kendi yolculuğun'}</h2><p>Tek kullanıcı · Bu cihazda yerel kayıt</p></div><ShieldCheck size={23}/></Card>{message&&<p className="success-note" role="status">{message}</p>}<form className="stack" onSubmit={async e=>{e.preventDefault();if(await update(s=>({...s,profile,settings}))){setMessage('Profil ve tercihlerin kaydedildi.')}}}><Card><h3>Hakkında</h3><p className="help">İsteğe bağlı bilgiler. Herkese açık kaynak koda veya bir sunucuya gönderilmez.</p><Field label="İsim"><input value={profile.name} maxLength={50} onChange={e=>setProfile({...profile,name:e.target.value})}/></Field><div className="form-grid">{numeric('age','Yaş',120)}{numeric('height','Boy (cm)',250)}{numeric('weight','Başlangıç kilo (kg)',400)}{numeric('goalWeight','Hedef kilo (kg)',400)}{numeric('childAge','Çocuğun yaşı',18)}</div><Field label="Meslek (isteğe bağlı)"><input value={profile.occupation} maxLength={150} onChange={e=>setProfile({...profile,occupation:e.target.value})}/></Field></Card><Card><h3>Hareket ve beslenme tercihlerin</h3>{(['exerciseHistory','pain','restrictions','equipment','diet','medical'] as const).map((key,i)=><Field key={key} label={['Egzersiz geçmişi','Mevcut ağrı / sakatlık','Kardiyovasküler veya diğer egzersiz kısıtları','Ekipmanlar','Beslenme tercihleri','Diyet / sıvı alımını etkileyen tıbbi durumlar'][i]}><textarea rows={2} maxLength={1000} value={profile[key]} onChange={e=>setProfile({...profile,[key]:e.target.value})}/></Field>)}<p className="help">Bunlar kişisel notlardır. Genel rehber otomatik bir tıbbi reçete üretmez.</p></Card><Card><h3>Günlük ritmin</h3><div className="form-grid"><Field label="Hedef yatış"><input type="time" required value={profile.bedtime} onChange={e=>setProfile({...profile,bedtime:e.target.value})}/></Field><Field label="Çocuğun uyanık olduğu başlangıç"><input type="time" required value={profile.childAwakeStart} onChange={e=>setProfile({...profile,childAwakeStart:e.target.value})}/></Field><Field label="Çocuğun uyku başlangıcı"><input type="time" required value={profile.childAwakeEnd} onChange={e=>setProfile({...profile,childAwakeEnd:e.target.value})}/></Field><Field label="Günlük su hedefi (ml)"><input type="number" min="100" max="10000" required value={settings.waterGoal} onChange={e=>setSettings({...settings,waterGoal:Number(e.target.value)})}/></Field><Field label="Haftalık net çalışma hedefi (dk)"><input type="number" min="0" max="840" value={settings.weeklyStudyGoal} onChange={e=>setSettings({...settings,weeklyStudyGoal:Number(e.target.value)})}/></Field></div><p className="help">Oyun zamanı uyanıklık aralığına sığmazsa başlangıca taşınır. Geceyi aşan farklı uyku düzenleri için oyun saatini Alışkanlıklar'dan kendin seç.</p></Card><Card><h3>Görünüm ve ses</h3><div className="theme-options">{[['light','Açık',Sun],['dark','Koyu',Moon],['system','Sistem',Smartphone]].map(([v,l,Icon])=>{const I=Icon as typeof Sun;return <button type="button" className={settings.theme===v?'selected':''} key={String(v)} onClick={()=>setSettings({...settings,theme:v as AppState['settings']['theme']})}><I size={18}/>{String(l)}</button>})}</div><label className="check-label"><input type="checkbox" checked={settings.sound} onChange={e=>setSettings({...settings,sound:e.target.checked})}/> Oturum bitiş sesi</label></Card><Card><div className="module-intro"><span className="icon-box lavender"><Bell/></span><div><h3>Nazik hatırlatmalar</h3><p>Her alışkanlığın hatırlatmasını ayrı açabilirsin.</p></div></div><div className="form-grid"><Field label="Sessiz saat başlangıcı"><input type="time" value={settings.quietStart} onChange={e=>setSettings({...settings,quietStart:e.target.value})}/></Field><Field label="Sessiz saat bitişi"><input type="time" value={settings.quietEnd} onChange={e=>setSettings({...settings,quietEnd:e.target.value})}/></Field></div><Field label="Günlük en fazla hatırlatma (uygulama açıkken)"><input type="number" min="0" max="20" step="1" value={settings.reminderLimit} onChange={e=>setSettings({...settings,reminderLimit:Number(e.target.value)})}/></Field><Button variant="secondary" onClick={async()=>{const allowed=await requestNotifications();setSettings({...settings,notifications:allowed});setMessage(allowed?'Tarayıcı bildirimi izni verildi. Tercihi kaydetmeyi unutma.':'Bildirim izni yok veya bu tarayıcı desteklemiyor. Açık uygulama içi hatırlatmalar kullanılabilir.')}}>Tarayıcı bildirimi için izin iste</Button><label className="check-label"><input type="checkbox" checked={settings.notifications} onChange={e=>setSettings({...settings,notifications:e.target.checked})}/> İzin varsa tarayıcı bildirimini kullan</label><p className="warning-note">Hatırlatmalar uygulama açıkken çalışır. Uygulama kapalıyken veya telefon kilitliyken alarm garanti edilmez. iOS web push için ana ekrana kurulum, izin ve ayrıca sunucu altyapısı gerekir; bu sürümde sunucu push kurulmadı.</p></Card><Button type="submit"><Check size={17}/> Profil ve tercihleri kaydet</Button></form><Card><h3>Kayıt geçmişi</h3><p>Geçmiş günlerdeki süre, tarih ve ayrıntıları düzenleyebilir veya hatalı kayıtları silebilirsin.</p><Button variant="secondary" onClick={()=>setHistory(true)}>Kayıtlarımı aç</Button></Card><Card><h3>Verilerin sende</h3><p>Tarayıcı verileri silinirse yerel kayıtlar kaybolabilir. Düzenli yedek al. JSON dosyası sağlık ve ruh hali bilgilerini de içerir; güvenli bir yerde sakla.</p><div className="button-row"><Button variant="secondary" onClick={()=>downloadBackup(state)}><Download size={17}/> JSON yedek al</Button><label className="button secondary upload-button"><Upload size={17}/> Yedek yükle<input type="file" accept="application/json,.json" onChange={e=>void upload(e.target.files?.[0])}/></label></div><p className="help">Bulut senkronizasyonu etkin değil. Kayıtların bu tarayıcıda IndexedDB'de saklanır; özel şifreli kasa değildir.</p></Card><Card><span className="icon-box sage"><Smartphone/></span><h3>iPhone'da yanında olsun.</h3><p>Safari'de uygulamayı aç → Paylaş → Ana Ekrana Ekle. Sonra Aliskan simgesinden açabilirsin.</p><p className="help">İlk yüklemeden sonra uygulama kabuğu çevrimdışı açılabilir. Safari ve ana ekran uygulaması farklı veri alanları kullanabilir; gerekirse JSON yedek aktar.</p></Card>{history&&<Modal title="Kayıt geçmişin" onClose={()=>setHistory(false)}><History/></Modal>}{incoming&&<Modal title="Yedek önizlemesi" onClose={()=>setIncoming(null)}><div className="stack"><p>{incoming.events.length} kayıt, {incoming.taskStates.length} görev işareti bulundu. Şema sürümü: {incoming.version}.</p><Field label="İçe aktarma yöntemi"><select value={mode} onChange={e=>setMode(e.target.value)}><option value="merge">Kayıtları birleştir (ayarlarımı koru)</option><option value="replace">Bütün verileri bu yedekle değiştir</option></select></Field><p className="warning-note">Önce mevcut verilerini indir. Değiştirme seçeneği profil ve ayarları da değiştirir.</p><Button variant="secondary" onClick={()=>{downloadBackup(state);setBackupDone(true)}}>Önce mevcut yedeği indir</Button><Button disabled={!backupDone} onClick={async()=>{if(await update(s=>mode==='merge'?mergeStates(s,incoming):incoming)){if(mode==='replace'){setProfile(incoming.profile);setSettings(incoming.settings)}setIncoming(null);setMessage('Yedek içe aktarıldı.')}}}>Onayla ve içe aktar</Button></div></Modal>}</>}
+import { useState } from "react";
+import {
+  User,
+  Download,
+  Upload,
+  ShieldCheck,
+  Bell,
+  Smartphone,
+  Check,
+  Sun,
+  Moon,
+} from "lucide-react";
+import { useStore } from "../app/Store";
+import { useRecordDraft } from "../app/useRecordDraft";
+import { Button, Field, Card, Modal } from "../components/UI";
+import {
+  downloadBackup,
+  validateBackup,
+  mergeStates,
+  previewMerge,
+} from "../data/backup";
+import { History } from "./History";
+import { requestNotifications } from "../platform/notifications";
+import type { AppState } from "../domain/types";
+export function Profile() {
+  const { state, update } = useStore();
+  const profileDraft = useRecordDraft(state.profile),
+    settingsDraft = useRecordDraft(state.settings);
+  const profile = profileDraft.value,
+    setProfile = profileDraft.setValue,
+    settings = settingsDraft.value,
+    setSettings = settingsDraft.setValue,
+    [message, setMessage] = useState(""),
+    [incoming, setIncoming] = useState<AppState | null>(null),
+    [mode, setMode] = useState("merge"),
+    [history, setHistory] = useState(false),
+    [backupDone, setBackupDone] = useState(false);
+  const numeric = (
+    key: "age" | "height" | "weight" | "goalWeight" | "childAge",
+    label: string,
+    max: number,
+  ) => (
+    <Field label={label}>
+      <input
+        type="number"
+        min="0"
+        max={max}
+        step={key === "weight" || key === "goalWeight" ? "0.1" : "1"}
+        value={profile[key] ?? ""}
+        onChange={(e) =>
+          setProfile({
+            ...profile,
+            [key]: e.target.value === "" ? null : Number(e.target.value),
+          })
+        }
+      />
+    </Field>
+  );
+  const upload = async (file?: File) => {
+    if (!file) return;
+    try {
+      setIncoming(validateBackup(JSON.parse(await file.text())));
+      setBackupDone(false);
+    } catch {
+      setMessage(
+        "Yedek şeması veya sürümü desteklenmiyor. Mevcut kayıtlarına dokunulmadı.",
+      );
+    }
+  };
+  return (
+    <>
+      <div className="page-heading">
+        <span className="eyebrow">SENİN HAYATIN, SENİN RİTMİN</span>
+        <h1>Profilin</h1>
+        <p>Hedeflerini hayatına uydur. Her şey değişebilir.</p>
+      </div>
+      <Card className="profile-summary">
+        <span className="avatar large">
+          {state.profile.name ? (
+            state.profile.name[0].toLocaleUpperCase("tr-TR")
+          ) : (
+            <User />
+          )}
+        </span>
+        <div>
+          <h2>{state.profile.name || "Kendi yolculuğun"}</h2>
+          <p>Tek kullanıcı · Bu cihazda yerel kayıt</p>
+        </div>
+        <ShieldCheck size={23} />
+      </Card>
+      {message && (
+        <p className="success-note" role="status">
+          {message}
+        </p>
+      )}
+      <form
+        className="stack"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (
+            await update((s) => ({
+              ...s,
+              profile: { ...s.profile, ...profileDraft.patch },
+              settings: { ...s.settings, ...settingsDraft.patch },
+            }))
+          ) {
+            profileDraft.reset();
+            settingsDraft.reset();
+            setMessage("Profil ve tercihlerin kaydedildi.");
+          }
+        }}
+      >
+        <>
+          {(profileDraft.dirty || settingsDraft.dirty) && (
+            <p className="draft-note" role="status">
+              Kaydedilmemiş değişikliklerin var. Bitirince aşağıdan kaydet.
+            </p>
+          )}
+        </>
+        <Card>
+          <h3>Hakkında</h3>
+          <p className="help">
+            İsteğe bağlı bilgiler. Herkese açık kaynak koda veya bir sunucuya
+            gönderilmez.
+          </p>
+          <Field label="İsim">
+            <input
+              value={profile.name}
+              maxLength={50}
+              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+            />
+          </Field>
+          <div className="form-grid">
+            {numeric("age", "Yaş", 120)}
+            {numeric("height", "Boy (cm)", 250)}
+            {numeric("weight", "Başlangıç kilo (kg)", 400)}
+            {numeric("goalWeight", "Hedef kilo (kg)", 400)}
+            {numeric("childAge", "Çocuğun yaşı", 18)}
+          </div>
+          <Field label="Meslek (isteğe bağlı)">
+            <input
+              value={profile.occupation}
+              maxLength={150}
+              onChange={(e) =>
+                setProfile({ ...profile, occupation: e.target.value })
+              }
+            />
+          </Field>
+        </Card>
+        <Card>
+          <h3>Hareket ve beslenme tercihlerin</h3>
+          {(
+            [
+              "exerciseHistory",
+              "pain",
+              "restrictions",
+              "equipment",
+              "diet",
+              "medical",
+            ] as const
+          ).map((key, i) => (
+            <Field
+              key={key}
+              label={
+                [
+                  "Egzersiz geçmişi",
+                  "Mevcut ağrı / sakatlık",
+                  "Kardiyovasküler veya diğer egzersiz kısıtları",
+                  "Ekipmanlar",
+                  "Beslenme tercihleri",
+                  "Diyet / sıvı alımını etkileyen tıbbi durumlar",
+                ][i]
+              }
+            >
+              <textarea
+                rows={2}
+                maxLength={1000}
+                value={profile[key]}
+                onChange={(e) =>
+                  setProfile({ ...profile, [key]: e.target.value })
+                }
+              />
+            </Field>
+          ))}
+          <p className="help">
+            Bunlar kişisel notlardır. Genel rehber otomatik bir tıbbi reçete
+            üretmez.
+          </p>
+        </Card>
+        <Card>
+          <h3>Günlük ritmin</h3>
+          <div className="form-grid">
+            <Field label="Hedef yatış">
+              <input
+                type="time"
+                required
+                value={profile.bedtime}
+                onChange={(e) =>
+                  setProfile({ ...profile, bedtime: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Çocuğun uyanık olduğu başlangıç">
+              <input
+                type="time"
+                required
+                value={profile.childAwakeStart}
+                onChange={(e) =>
+                  setProfile({ ...profile, childAwakeStart: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Çocuğun uyku başlangıcı">
+              <input
+                type="time"
+                required
+                value={profile.childAwakeEnd}
+                onChange={(e) =>
+                  setProfile({ ...profile, childAwakeEnd: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Günlük su hedefi (ml)">
+              <input
+                type="number"
+                min="100"
+                max="10000"
+                required
+                value={settings.waterGoal}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    waterGoal: Number(e.target.value),
+                  })
+                }
+              />
+            </Field>
+            <Field label="Haftalık net çalışma hedefi (dk)">
+              <input
+                type="number"
+                min="0"
+                max="840"
+                value={settings.weeklyStudyGoal}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    weeklyStudyGoal: Number(e.target.value),
+                  })
+                }
+              />
+            </Field>
+          </div>
+          <p className="help">
+            Oyun zamanı uyanıklık aralığına sığmazsa başlangıca taşınır. Geceyi
+            aşan farklı uyku düzenleri için oyun saatini Alışkanlıklar'dan
+            kendin seç.
+          </p>
+        </Card>
+        <Card>
+          <h3>Görünüm ve ses</h3>
+          <div className="theme-options">
+            {[
+              ["light", "Açık", Sun],
+              ["dark", "Koyu", Moon],
+              ["system", "Sistem", Smartphone],
+            ].map(([v, l, Icon]) => {
+              const I = Icon as typeof Sun;
+              return (
+                <button
+                  type="button"
+                  className={settings.theme === v ? "selected" : ""}
+                  key={String(v)}
+                  onClick={() =>
+                    setSettings({
+                      ...settings,
+                      theme: v as AppState["settings"]["theme"],
+                    })
+                  }
+                >
+                  <I size={18} />
+                  {String(l)}
+                </button>
+              );
+            })}
+          </div>
+          <label className="check-label">
+            <input
+              type="checkbox"
+              checked={settings.sound}
+              onChange={(e) =>
+                setSettings({ ...settings, sound: e.target.checked })
+              }
+            />{" "}
+            Oturum bitiş sesi
+          </label>
+        </Card>
+        <Card>
+          <div className="module-intro">
+            <span className="icon-box lavender">
+              <Bell />
+            </span>
+            <div>
+              <h3>Nazik hatırlatmalar</h3>
+              <p>Her alışkanlığın hatırlatmasını ayrı açabilirsin.</p>
+            </div>
+          </div>
+          <div className="form-grid">
+            <Field label="Sessiz saat başlangıcı">
+              <input
+                type="time"
+                value={settings.quietStart}
+                onChange={(e) =>
+                  setSettings({ ...settings, quietStart: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Sessiz saat bitişi">
+              <input
+                type="time"
+                value={settings.quietEnd}
+                onChange={(e) =>
+                  setSettings({ ...settings, quietEnd: e.target.value })
+                }
+              />
+            </Field>
+          </div>
+          <Field label="Günlük en fazla hatırlatma (uygulama açıkken)">
+            <input
+              type="number"
+              min="0"
+              max="20"
+              step="1"
+              value={settings.reminderLimit}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  reminderLimit: Number(e.target.value),
+                })
+              }
+            />
+          </Field>
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              const allowed = await requestNotifications();
+              setSettings({ ...settings, notifications: allowed });
+              setMessage(
+                allowed
+                  ? "Tarayıcı bildirimi izni verildi. Tercihi kaydetmeyi unutma."
+                  : "Bildirim izni yok veya bu tarayıcı desteklemiyor. Açık uygulama içi hatırlatmalar kullanılabilir.",
+              );
+            }}
+          >
+            Tarayıcı bildirimi için izin iste
+          </Button>
+          <label className="check-label">
+            <input
+              type="checkbox"
+              checked={settings.notifications}
+              onChange={(e) =>
+                setSettings({ ...settings, notifications: e.target.checked })
+              }
+            />{" "}
+            İzin varsa tarayıcı bildirimini kullan
+          </label>
+          <p className="warning-note">
+            Hatırlatmalar uygulama açıkken çalışır. Uygulama kapalıyken veya
+            telefon kilitliyken alarm garanti edilmez. iOS web push için ana
+            ekrana kurulum, izin ve ayrıca sunucu altyapısı gerekir; bu sürümde
+            sunucu push kurulmadı.
+          </p>
+        </Card>
+        <Button
+          type="submit"
+          className={
+            profileDraft.dirty || settingsDraft.dirty ? "profile-save" : ""
+          }
+        >
+          <Check size={17} /> Profil ve tercihleri kaydet
+        </Button>
+      </form>
+      <Card>
+        <h3>Kayıt geçmişi</h3>
+        <p>
+          Geçmiş günlerdeki süre, tarih ve ayrıntıları düzenleyebilir veya
+          hatalı kayıtları silebilirsin.
+        </p>
+        <Button variant="secondary" onClick={() => setHistory(true)}>
+          Kayıtlarımı aç
+        </Button>
+      </Card>
+      <Card>
+        <h3>Verilerin sende</h3>
+        <p>
+          Tarayıcı verileri silinirse yerel kayıtlar kaybolabilir. Düzenli yedek
+          al. JSON dosyası sağlık ve ruh hali bilgilerini de içerir; güvenli bir
+          yerde sakla.
+        </p>
+        <div className="button-row">
+          <Button variant="secondary" onClick={() => downloadBackup(state)}>
+            <Download size={17} /> JSON yedek al
+          </Button>
+          <label className="button secondary upload-button">
+            <Upload size={17} /> Yedek yükle
+            <input
+              type="file"
+              accept="application/json,.json"
+              onChange={(e) => void upload(e.target.files?.[0])}
+            />
+          </label>
+        </div>
+        <p className="help">
+          Bulut senkronizasyonu etkin değil. Kayıtların bu tarayıcıda
+          IndexedDB'de saklanır; özel şifreli kasa değildir.
+        </p>
+      </Card>
+      <Card>
+        <span className="icon-box sage">
+          <Smartphone />
+        </span>
+        <h3>iPhone'da yanında olsun.</h3>
+        <p>
+          Safari'de uygulamayı aç → Paylaş → Ana Ekrana Ekle. Sonra Aliskan
+          simgesinden açabilirsin.
+        </p>
+        <p className="help">
+          İlk yüklemeden sonra uygulama kabuğu çevrimdışı açılabilir. Safari ve
+          ana ekran uygulaması farklı veri alanları kullanabilir; gerekirse JSON
+          yedek aktar.
+        </p>
+      </Card>
+      {history && (
+        <Modal title="Kayıt geçmişin" onClose={() => setHistory(false)}>
+          <History />
+        </Modal>
+      )}
+      {incoming && (
+        <Modal title="Yedek önizlemesi" onClose={() => setIncoming(null)}>
+          <div className="stack">
+            <p>
+              {incoming.events.length} kayıt, {incoming.taskStates.length} görev
+              işareti bulundu. Şema sürümü: {incoming.version}.
+            </p>
+            <Card>
+              <h3>Birleştirme özeti</h3>
+              <p>
+                {previewMerge(state, incoming).newRecords} yeni kayıt ·{" "}
+                {previewMerge(state, incoming).duplicateRecords} zaten bulunan
+                kayıt.
+              </p>
+              <p>
+                {previewMerge(state, incoming).conflictingRecords} farklı
+                içerikli kayıt var. Birleştirmede cihazındaki kayıtlar korunur.
+              </p>
+            </Card>
+            <Field label="İçe aktarma yöntemi">
+              <select value={mode} onChange={(e) => setMode(e.target.value)}>
+                <option value="merge">
+                  Kayıtları birleştir (ayarlarımı koru)
+                </option>
+                <option value="replace">
+                  Bütün verileri bu yedekle değiştir
+                </option>
+              </select>
+            </Field>
+            <p className="warning-note">
+              Önce mevcut verilerini indir. Değiştirme seçeneği profil ve
+              ayarları da değiştirir.
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                downloadBackup(state);
+                setBackupDone(true);
+              }}
+            >
+              Önce mevcut yedeği indir
+            </Button>
+            <Button
+              disabled={!backupDone}
+              onClick={async () => {
+                if (
+                  await update((s) =>
+                    mode === "merge" ? mergeStates(s, incoming) : incoming,
+                  )
+                ) {
+                  if (mode === "replace") {
+                    profileDraft.reset();
+                    settingsDraft.reset();
+                  }
+                  setIncoming(null);
+                  setMessage("Yedek içe aktarıldı.");
+                }
+              }}
+            >
+              Onayla ve içe aktar
+            </Button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}

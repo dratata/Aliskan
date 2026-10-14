@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useStore } from "../app/Store";
 import { localDate, shiftDate } from "../domain/dates";
-import { summarize, chartData } from "../domain/analytics";
+import { summarize, chartData, latestDailyEvents } from "../domain/analytics";
 import { Card, SectionTitle, Empty, Field } from "../components/UI";
 const chartChoices = [
   { key: "study", name: "Ders çalışma", unit: "dk", color: "#6a8563" },
@@ -56,12 +56,10 @@ export default function Insights() {
   const weights = state.events
       .filter((e) => e.type === "weight" && e.date >= start && e.date <= end)
       .sort((a, b) => a.date.localeCompare(b.date)),
-    sleepRecords = state.events.filter(
+    sleepRecords = latestDailyEvents(state.events, "sleep").filter(
       (e) => e.type === "sleep" && e.date >= start && e.date <= end,
     ),
-    avgSleep = sleepRecords.length
-      ? sleepRecords.reduce((a, e) => a + e.value, 0) / sleepRecords.length / 60
-      : null;
+    avgSleep = summary.sleepHours;
   const cigarettes = state.events
       .filter(
         (e) =>
@@ -71,15 +69,13 @@ export default function Insights() {
           e.date <= end,
       )
       .sort((a, b) => a.at.localeCompare(b.at)),
-    intervals = cigarettes
-      .slice(1)
-      .map((e, i) => ({
-        start: cigarettes[i].at,
-        end: e.at,
-        hours:
-          (new Date(e.at).getTime() - new Date(cigarettes[i].at).getTime()) /
-          3600000,
-      }));
+    intervals = cigarettes.slice(1).map((e, i) => ({
+      start: cigarettes[i].at,
+      end: e.at,
+      hours:
+        (new Date(e.at).getTime() - new Date(cigarettes[i].at).getTime()) /
+        3600000,
+    }));
   const maxInterval = intervals.length
     ? Math.max(...intervals.map((i) => i.hours))
     : null;
@@ -327,8 +323,8 @@ export default function Insights() {
             {avgSleep === null ? "—" : avgSleep.toFixed(1)} <small>saat</small>
           </h2>
           <p>
-            {sleepRecords.length} kayıt üzerinden. Düzenlilik, kaydedilen uyku
-            saatleriyle değerlendirilir.
+            {sleepRecords.length} gece üzerinden; her günün son kaydı
+            kullanılır. Düzenlilik, kaydedilen uyku saatleriyle değerlendirilir.
           </p>
           {sleepRecords.length >= 2 && (
             <small>

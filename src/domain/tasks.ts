@@ -20,7 +20,10 @@ export function dailyTasks(state: AppState, date: string): Task[] {
         date,
         title: h.title,
         time,
-        target: h.target,
+        target:
+          h.id === "morning"
+            ? state.morningSteps.reduce((n, s) => n + s.minutes, 0)
+            : h.target,
         unit: h.unit,
         status: saved?.status ?? "pending",
       } as Task;
@@ -45,6 +48,14 @@ export function completeTask(
         status,
         derived,
         target: task.target,
+        ...(["night", "morning"].includes(task.habitId)
+          ? {
+              requiredSteps: (task.habitId === "night"
+                ? state.nightSteps
+                : state.morningSteps
+              ).map((s) => s.id),
+            }
+          : {}),
         ...(time ? { time } : {}),
       },
     ],
@@ -81,13 +92,19 @@ export function reconcileTasks(state: AppState): AppState {
         total = events.filter(
           (e) => e.type === "meal" || e.type === "snack",
         ).length;
-      else if (task.habitId === "night")
-        return state.nightSteps.every((st) =>
+      else if (task.habitId === "night" || task.habitId === "morning")
+        return (
+          task.requiredSteps ??
+          (task.habitId === "night"
+            ? state.nightSteps
+            : state.morningSteps
+          ).map((s) => s.id)
+        ).every((id) =>
           events.some(
             (e) =>
               e.type === "routine" &&
-              e.data.routine === "night" &&
-              e.data.step === st.id,
+              e.data.routine === task.habitId &&
+              e.data.step === id,
           ),
         );
       else return true;
@@ -101,12 +118,39 @@ export function snapshotTaskTargets(state: AppState): AppState {
   return {
     ...state,
     taskStates: state.taskStates.map((task) =>
-      task.derived && task.target === undefined
+      task.derived
         ? {
             ...task,
-            target: state.habits.find((h) => h.id === task.habitId)!.target,
+            target:
+              task.target ??
+              state.habits.find((h) => h.id === task.habitId)!.target,
+            ...(["night", "morning"].includes(task.habitId)
+              ? {
+                  requiredSteps:
+                    task.requiredSteps ??
+                    (task.habitId === "night"
+                      ? state.nightSteps
+                      : state.morningSteps
+                    ).map((s) => s.id),
+                }
+              : {}),
           }
         : task,
     ),
   };
+}
+
+export function nextTask(tasks: Task[], time: string): Task | undefined {
+  const remaining = tasks
+    .filter((t) => t.status === "pending" || t.status === "snoozed")
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const now = clockMinutes(time),
+    recent = remaining.filter(
+      (t) => clockMinutes(t.time) <= now && now - clockMinutes(t.time) <= 90,
+    );
+  return (
+    recent.at(-1) ??
+    remaining.find((t) => clockMinutes(t.time) > now) ??
+    remaining.at(-1)
+  );
 }

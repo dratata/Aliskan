@@ -10,3 +10,7 @@
 @media(max-width:760px){.guide-frame-tabs>button{font-size:11px}.guide-image-window{width:196px}.guide-image-stage{min-height:300px}.guide-caption{padding:18px 17px 8px}.guide-voice{font-size:12px}.howto-header .text-button{font-size:11px}.source-reviewed{font-size:10px}.source-video-heading p{font-size:11px}.video-lookfor{font-size:12px}.guide-demo-note{font-size:11px}}
 
 .quick-feedback{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--sage);border-radius:12px;font-size:13px;color:var(--green);margin:12px 0}.quick-grid>button:disabled{opacity:.65;cursor:wait}.weekly-goal{margin-bottom:20px}.weekly-goal .habit-top{justify-content:space-between;margin-top:12px}.weekly-goal .linear-progress i{background:#81986f}
+
+.next-step{display:flex;align-items:center;gap:14px;margin-bottom:20px;border-color:#81986f66;background:var(--sage)}.next-step>div{flex:1;min-width:0}.next-step .eyebrow{font-size:9px;letter-spacing:1px}.next-title{display:block;margin:5px 0;font-size:15px}.next-step p{font-size:12px;color:var(--muted)}.task-filter{margin-bottom:20px}.draft-note{padding:12px 16px;background:var(--yellow);border-radius:12px;font-size:13px}.start-card .eyebrow{line-height:1.6}
+
+.profile-save{position:sticky;bottom:calc(90px + env(safe-area-inset-bottom));z-index:16;box-shadow:0 8px 24px #0002}@media(min-width:761px){.profile-save{bottom:20px}}

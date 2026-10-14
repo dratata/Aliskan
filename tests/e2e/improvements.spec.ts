@@ -84,6 +84,7 @@ test("yanlışlıkla işaretlenen günlük görev yeniden planlanır", async ({
     .getByRole("button", { name: "Küçük bir çalışma seçenekleri" })
     .click();
   await page.getByRole("button", { name: "Tamamladım", exact: true }).click();
+  await page.getByRole("button", { name: "Tüm adımlar", exact: true }).click();
   await page
     .getByRole("button", { name: "Küçük bir çalışma seçenekleri" })
     .click();

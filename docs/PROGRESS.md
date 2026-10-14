@@ -61,3 +61,13 @@ Tarama ve gerekçeler: AUDIT-2026-10-14.md. Aynı IndexedDB transaction içinde 
 Dokuz rehberin WebP kopyaları yaklaşık 1,2 MB; PNG özgünler korunur (yaklaşık 19 MB). Uygulama WebP kullanır; çevrimdışı SVG alternatifi sürer.
 
 Doğrulama: 48 domain/veri testi ve 26 mobil Playwright senaryosu başarılı. Üretim derlemesi başarılı. İki sekme kayıt koruma, kısa deneme, egzersiz süresi, geri hareketi, 105 kayıt sayfalama ve haftalık hedef için yeni regresyonlar eklendi. Genel dil anlayışı, kapalı uygulama push ve bulut senkronizasyonu bu taramanın kapsamı dışındadır; fiziksel iPhone kontrolü açık kalır.
+
+## 14 Ekim — İkinci tarama ve günlük kullanım iyileştirmeleri
+
+Kalan/tüm günlük adımlar ve saate göre sıradaki küçük adım, güncel hedefli hızlı başlangıç ve ayrı akşam egzersizi eklendi. Yedek birleştirmede cihazdaki aynı ID'li kayıt korunur; yeni/aynı/çatışan kayıt sayıları önizlenir. Profil yalnız değiştirilen alanları kaydeder; diğer sekmenin tercihlerini ezmez. Mobil kaydet düğmesi değişiklik varken görünür kalır.
+
+Uyku ekranı seçilen geceyi günceller; uyku kalitesi/sabah enerjisi isteğe bağlı, şimdiki his ayrı alanlardır. Eski mükerrer kayıtlar silinmeden günlük son kayıt ortalamaya alınır. Baba-kız etkinliğinde varsayılan dakika kaydı kaldırıldı; gerçek süre girilir.
+
+Sabah rutini saat/süre/sıra bakımından düzenlenebilir. Gece ve sabah rutinleri kaldığı adımı ve başlangıç gününü saklar. Gece yarısında rutin iki güne bölünmez. Rutin gününü kullanıcı değiştirebilir. Alışkanlıktan rutin başlangıç saati değiştirildiğinde adımlar birlikte kayar. Sabah adımı silindiğinde otomatik görev ilerlemesi güncellenir.
+
+52 domain/veri testi, 33 mobil E2E senaryosu ve üretim derlemesi başarılı. Eksikler: kapalı uygulama sunucu push, bulut eşitleme ve gerçek iPhone/Safari cihaz testi; kapsam bu turda yerel veri ve mevcut günlük akışların iyileştirilmesidir. Ayrıntılar: AUDIT-SECOND-2026-10-14.md.

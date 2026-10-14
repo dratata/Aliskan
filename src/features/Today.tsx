@@ -9,9 +9,9 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { useState } from "react";
-import { useLocalDay } from "../platform/day";
+import { useLocalDay, useLocalClock } from "../platform/day";
 import { useStore } from "../app/Store";
-import { dailyTasks, completeTask } from "../domain/tasks";
+import { dailyTasks, completeTask, nextTask } from "../domain/tasks";
 import { dateLabel, localDate } from "../domain/dates";
 import { proposeAdaptation } from "../domain/adaptation";
 import type { HabitId, Task } from "../domain/types";
@@ -36,6 +36,8 @@ export function Today({
     [waterBusy, setWaterBusy] = useState(false),
     [waterId, setWaterId] = useState<string | null>(null),
     [quickMessage, setQuickMessage] = useState(""),
+    [view, setView] = useState("remaining"),
+    clock = useLocalClock(),
     today = useLocalDay(),
     tasks = dailyTasks(state, today),
     done = tasks.filter((t) => t.status === "done").length,
@@ -49,7 +51,12 @@ export function Today({
     smoke = state.events
       .filter((e) => e.date === today && e.type === "smoking")
       .reduce((a, e) => a + e.value, 0);
-  const proposals = proposeAdaptation(state);
+  const proposals = proposeAdaptation(state),
+    next = nextTask(tasks, clock),
+    visibleTasks =
+      view === "all"
+        ? tasks
+        : tasks.filter((t) => t.status === "pending" || t.status === "snoozed");
   return (
     <>
       <div className="page-heading">
@@ -106,9 +113,7 @@ export function Today({
           </p>
           <button
             onClick={() => {
-              const task = tasks.find(
-                (t) => t.status !== "done" && t.status !== "skipped",
-              );
+              const task = next;
               if (task) open(task.habitId, task.habitId);
               else open("breathing");
             }}
@@ -136,6 +141,25 @@ export function Today({
         </div>
         <span className="progress-decoration">✦</span>
       </div>
+      {next && (
+        <section className="card next-step" aria-label="Sıradaki küçük adım">
+          <HabitIcon id={next.habitId} />
+          <div>
+            <span className="eyebrow">SIRADAKİ KÜÇÜK ADIM</span>
+            <strong className="next-title">{next.title}</strong>
+            <p>
+              {next.time} · {next.target} {next.unit}
+            </p>
+          </div>
+          <button
+            className="icon-button"
+            aria-label="Sıradaki adımı aç"
+            onClick={() => open(next.habitId, next.habitId)}
+          >
+            <ArrowUpRight size={21} />
+          </button>
+        </section>
+      )}
       <SectionTitle
         title="Bugünün akışı"
         sub="Birer birer, kendi ritminde."
@@ -150,14 +174,31 @@ export function Today({
           </span>
         }
       />
+      <div className="segmented task-filter" aria-label="Günlük plan görünümü">
+        <button
+          aria-pressed={view === "remaining"}
+          className={view === "remaining" ? "selected" : ""}
+          onClick={() => setView("remaining")}
+        >
+          Kalan adımlar
+        </button>
+        <button
+          aria-pressed={view === "all"}
+          className={view === "all" ? "selected" : ""}
+          onClick={() => setView("all")}
+        >
+          Tüm adımlar
+        </button>
+      </div>
       <div className="timeline">
-        {tasks.length === 0 ? (
+        {visibleTasks.length === 0 ? (
           <Empty>
-            Bugün için aktif alışkanlık yok. Alışkanlıklar sekmesinden
-            ekleyebilirsin.
+            {tasks.length === 0
+              ? "Bugün için aktif alışkanlık yok. Alışkanlıklar sekmesinden ekleyebilirsin."
+              : "Şimdilik kalan adım yok. Tamamladıklarını ve ertelediklerini Tüm adımlar’dan görebilirsin."}
           </Empty>
         ) : (
-          tasks.map((task) => (
+          visibleTasks.map((task) => (
             <div key={task.id} className={`task-row ${task.status}`}>
               <div className="task-time">
                 <span>{task.time}</span>
@@ -288,7 +329,11 @@ export function Today({
           <p>
             {study > 0
               ? `Bugün ${Math.round(study)} dakika çalıştın. Zaman ayırmayı başardın; hedefin tamamı olmasa da bu süre değerli.`
-              : `Bugün yalnızca ${state.habits.find((h) => h.id === "study")?.target ?? 10} dakika ile başlayabilirsin. Başlamanın zor geldiği günler için 2 dakika deneme seçeneği de var.`}
+              : state.habits.find((h) => h.id === "study")?.active
+                ? `Bugün yalnızca ${state.habits.find((h) => h.id === "study")?.target ?? 10} dakika ile başlayabilirsin. Başlamanın zor geldiği günler için 2 dakika deneme seçeneği de var.`
+                : next
+                  ? `${next.title} için ${next.target} ${next.unit} ayırabilirsin. Bugün zor geliyorsa planını küçültmek de bir seçenektir.`
+                  : "Bugün kendine alan açabilirsin. İstersen kısa bir nefes molasıyla devam et."}
           </p>
         </div>
       </Card>

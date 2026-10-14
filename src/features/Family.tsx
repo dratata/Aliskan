@@ -1,13 +1,247 @@
-import {GuidePlayer} from '../components/GuidePlayer';
-import {VideoCard} from '../components/VideoCard';
-import {GuideCoach} from '../components/GuideCoach';
-import {familyGuide} from '../content/guides';
-import {useState,useRef} from 'react';
-import {Heart,Shuffle,Check,Search} from 'lucide-react';
-import {useStore} from '../app/Store';
-import {activities,selectActivity} from '../content/activities';
-import {localDate} from '../domain/dates';
-import {dailyTasks,completeTask} from '../domain/tasks';
-import {Illustration} from '../components/Illustration';
-import {Button,Card,Field} from '../components/UI';
-export function Family(){const {state,addEvent,update}=useStore(),[id,setId]=useState(()=>selectActivity(activities,state,localDate()).id),[browse,setBrowse]=useState(false),[category,setCategory]=useState('Hepsi'),[query,setQuery]=useState(''),[saved,setSaved]=useState(''),[duration,setDuration]=useState(10),a=activities.find(a=>a.id===id)!;const categories=[...new Set(activities.map(a=>a.category))];const session=useRef(crypto.randomUUID()),saving=useRef(false),[busy,setBusy]=useState(false);const record=async(feedback:string)=>{if(saving.current)return;saving.current=true;setBusy(true);if(await addEvent('family',duration,{activityId:a.id,activityName:a.name,category:a.category,feedback},undefined,'manual',session.current)){const task=dailyTasks(state,localDate()).find(t=>t.habitId==='family');if(task)await update(s=>completeTask(s,task,'done',undefined,true));setSaved('Bu güzel an kaydedildi. Geri bildirimin sonraki oyun seçimlerine yardımcı olacak.')}saving.current=false;setBusy(false)};return <div className="stack"><GuideCoach module="family"/><div className="module-intro"><span className="icon-box pink"><Heart/></span><div><h3>Birlikte olduğunuz küçük anlar.</h3><p>İki yaş çevresi için oyun çeşitliliği. Bir değerlendirme veya gelişim yarışı değil.</p></div></div><div className="button-row"><Button variant="secondary" onClick={()=>setBrowse(!browse)}><Search size={17}/> 60 etkinliği keşfet</Button><Button variant="ghost" onClick={()=>{const next=selectActivity(activities.filter(x=>x.id!==id),state,localDate());session.current=crypto.randomUUID();setId(next.id);setDuration(next.minutes);setSaved('');void update(s=>({...s,suggestedActivities:[...s.suggestedActivities,id,next.id].slice(-10)}))}}><Shuffle size={17}/> Başka oyun</Button></div>{browse?<><Field label="Kategori"><select value={category} onChange={e=>setCategory(e.target.value)}><option>Hepsi</option>{categories.map(c=><option key={c}>{c}</option>)}</select></Field><Field label="Etkinlik ara"><input placeholder="Oyun adı veya beceri" value={query} onChange={e=>setQuery(e.target.value)}/></Field><div className="activity-library">{activities.filter(x=>(category==='Hepsi'||x.category===category)&&`${x.name} ${x.skill}`.toLocaleLowerCase('tr-TR').includes(query.toLocaleLowerCase('tr-TR'))).map(x=><button key={x.id} onClick={()=>{session.current=crypto.randomUUID();setId(x.id);setDuration(x.minutes);setBrowse(false);setSaved('')}}><span>{x.category}</span><strong>{x.name}</strong><small>{x.minutes} dk · {x.prepMinutes} dk hazırlık</small></button>)}</div></>:<><span className="pill pink">{a.category}</span><h2>{a.name}</h2><GuidePlayer key={a.id} guide={familyGuide(a)}/><VideoCard id={familyGuide(a).videoId}/><p className="lead">{a.skill}</p><div className="exercise-specs"><span><b>{a.prepMinutes} dk</b>Hazırlık</span><span><b>{a.minutes} dk</b>Oyun</span></div><Card><span className="eyebrow">MALZEMELER</span><p>{a.materials}</p></Card><ol className="guide-steps">{a.steps.map(s=><li key={s}>{s}</li>)}</ol><p className="warning-note">{a.safety}</p><div className="variations"><Card><h3>Daha kolay</h3><p>{a.easier}</p></Card><Card><h3>Bir adım ileri</h3><p>{a.harder}</p></Card></div><Field label="Birlikte geçirdiğiniz süre (dk)"><input type="number" min="1" max="120" value={duration} onChange={e=>setDuration(Math.max(1,Math.min(120,Number(e.target.value))))}/></Field><h3>Nasıl geçti?</h3><div className="feedback-grid">{[['done','Yapıldı'],['loved','Çok sevdi'],['again','Tekrar istiyor'],['uninterested','İlgi göstermedi']].map(([value,label])=><Button key={value} variant="secondary" disabled={!!saved||busy} onClick={()=>void record(value)}>{label}</Button>)}</div>{saved&&<p className="success-note" role="status"><Check size={18}/>{saved}</p>}<p className="help">Görsel adımlar oyuna özgüdür. Videolar ebeveyn yaklaşımı veya birlikte okuma örneği sunar. Çocuğunun ilgisine göre kısa tutabilirsin.</p></>}</div>}
+import { GuidePlayer } from "../components/GuidePlayer";
+import { VideoCard } from "../components/VideoCard";
+import { GuideCoach } from "../components/GuideCoach";
+import { familyGuide } from "../content/guides";
+import { useState, useRef } from "react";
+import { Heart, Shuffle, Check, Search } from "lucide-react";
+import { useStore } from "../app/Store";
+import { activities, selectActivity } from "../content/activities";
+import { localDate } from "../domain/dates";
+import { dailyTasks, completeTask } from "../domain/tasks";
+import { Illustration } from "../components/Illustration";
+import { Button, Card, Field } from "../components/UI";
+export function Family() {
+  const { state, addEvent, update } = useStore(),
+    [id, setId] = useState(
+      () => selectActivity(activities, state, localDate()).id,
+    ),
+    [browse, setBrowse] = useState(false),
+    [category, setCategory] = useState("Hepsi"),
+    [query, setQuery] = useState(""),
+    [saved, setSaved] = useState(""),
+    [duration, setDuration] = useState(""),
+    a = activities.find((a) => a.id === id)!;
+  const categories = [...new Set(activities.map((a) => a.category))];
+  const session = useRef(crypto.randomUUID()),
+    saving = useRef(false),
+    [busy, setBusy] = useState(false);
+  const record = async (feedback: string) => {
+    if (
+      saving.current ||
+      !Number.isFinite(Number(duration)) ||
+      Number(duration) < 0.5 ||
+      Number(duration) > 120
+    )
+      return;
+    saving.current = true;
+    setBusy(true);
+    if (
+      await addEvent(
+        "family",
+        Number(duration),
+        {
+          activityId: a.id,
+          activityName: a.name,
+          category: a.category,
+          feedback,
+        },
+        undefined,
+        "manual",
+        session.current,
+      )
+    ) {
+      const task = dailyTasks(state, localDate()).find(
+        (t) => t.habitId === "family",
+      );
+      if (task)
+        await update((s) => completeTask(s, task, "done", undefined, true));
+      setSaved(
+        "Bu güzel an kaydedildi. Geri bildirimin sonraki oyun seçimlerine yardımcı olacak.",
+      );
+    }
+    saving.current = false;
+    setBusy(false);
+  };
+  return (
+    <div className="stack">
+      <GuideCoach module="family" />
+      <div className="module-intro">
+        <span className="icon-box pink">
+          <Heart />
+        </span>
+        <div>
+          <h3>Birlikte olduğunuz küçük anlar.</h3>
+          <p>
+            İki yaş çevresi için oyun çeşitliliği. Bir değerlendirme veya
+            gelişim yarışı değil.
+          </p>
+        </div>
+      </div>
+      <div className="button-row">
+        <Button variant="secondary" onClick={() => setBrowse(!browse)}>
+          <Search size={17} /> 60 etkinliği keşfet
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            const next = selectActivity(
+              activities.filter((x) => x.id !== id),
+              state,
+              localDate(),
+            );
+            session.current = crypto.randomUUID();
+            setId(next.id);
+            setDuration("");
+            setSaved("");
+            void update((s) => ({
+              ...s,
+              suggestedActivities: [
+                ...s.suggestedActivities,
+                id,
+                next.id,
+              ].slice(-10),
+            }));
+          }}
+        >
+          <Shuffle size={17} /> Başka oyun
+        </Button>
+      </div>
+      {browse ? (
+        <>
+          <Field label="Kategori">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option>Hepsi</option>
+              {categories.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Etkinlik ara">
+            <input
+              placeholder="Oyun adı veya beceri"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </Field>
+          <div className="activity-library">
+            {activities
+              .filter(
+                (x) =>
+                  (category === "Hepsi" || x.category === category) &&
+                  `${x.name} ${x.skill}`
+                    .toLocaleLowerCase("tr-TR")
+                    .includes(query.toLocaleLowerCase("tr-TR")),
+              )
+              .map((x) => (
+                <button
+                  key={x.id}
+                  onClick={() => {
+                    session.current = crypto.randomUUID();
+                    setId(x.id);
+                    setDuration("");
+                    setBrowse(false);
+                    setSaved("");
+                  }}
+                >
+                  <span>{x.category}</span>
+                  <strong>{x.name}</strong>
+                  <small>
+                    {x.minutes} dk · {x.prepMinutes} dk hazırlık
+                  </small>
+                </button>
+              ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <span className="pill pink">{a.category}</span>
+          <h2>{a.name}</h2>
+          <GuidePlayer key={a.id} guide={familyGuide(a)} />
+          <VideoCard id={familyGuide(a).videoId} />
+          <p className="lead">{a.skill}</p>
+          <div className="exercise-specs">
+            <span>
+              <b>{a.prepMinutes} dk</b>Hazırlık
+            </span>
+            <span>
+              <b>{a.minutes} dk</b>Oyun
+            </span>
+          </div>
+          <Card>
+            <span className="eyebrow">MALZEMELER</span>
+            <p>{a.materials}</p>
+          </Card>
+          <ol className="guide-steps">
+            {a.steps.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ol>
+          <p className="warning-note">{a.safety}</p>
+          <div className="variations">
+            <Card>
+              <h3>Daha kolay</h3>
+              <p>{a.easier}</p>
+            </Card>
+            <Card>
+              <h3>Bir adım ileri</h3>
+              <p>{a.harder}</p>
+            </Card>
+          </div>
+          <Field label="Birlikte geçirdiğiniz süre (dk)">
+            <input
+              type="number"
+              min="0.5"
+              max="120"
+              step="0.5"
+              value={duration}
+              placeholder="Gerçek süre, örn. 5"
+              onChange={(e) => setDuration(e.target.value)}
+            />
+          </Field>
+          <p className="help">
+            Önerilen oyun süresi {a.minutes} dakika; kayda yalnız birlikte
+            geçirdiğiniz gerçek süreyi yaz.
+          </p>
+          <h3>Nasıl geçti?</h3>
+          <div className="feedback-grid">
+            {[
+              ["done", "Yapıldı"],
+              ["loved", "Çok sevdi"],
+              ["again", "Tekrar istiyor"],
+              ["uninterested", "İlgi göstermedi"],
+            ].map(([value, label]) => (
+              <Button
+                key={value}
+                variant="secondary"
+                disabled={
+                  !!saved ||
+                  busy ||
+                  !duration ||
+                  Number(duration) < 0.5 ||
+                  Number(duration) > 120
+                }
+                onClick={() => void record(value)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+          {saved && (
+            <p className="success-note" role="status">
+              <Check size={18} />
+              {saved}
+            </p>
+          )}
+          <p className="help">
+            Görsel adımlar oyuna özgüdür. Videolar ebeveyn yaklaşımı veya
+            birlikte okuma örneği sunar. Çocuğunun ilgisine göre kısa
+            tutabilirsin.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
