@@ -63,3 +63,9 @@ Egzersiz ve beslenme içerikleri genel rehberdir. Profil notları otomatik tıbb
 İlerideki güvenli API/bulut tasarımı: [docs/FUTURE-INTEGRATIONS.md](docs/FUTURE-INTEGRATIONS.md).
 
 Aşamalar ve test sonuçları: [docs/PROGRESS.md](docs/PROGRESS.md).
+
+## Gösteren rehberler
+
+Hareketlerde üç aşamalı özgün görseller, seçilebilir/otomatik ilerleyen adımlar ve teknik kontrol noktaları bulunur. 60 oyunda etkinliğe özgü SVG sahnesi ve örnek ebeveyn cümleleri vardır. Öğrenme gösterimi kayıt oluşturmaz; gerçek oturum zamanlayıcısı ayrıdır. İsteğe bağlı Türkçe seslendirme tarayıcı desteğine bağlıdır.
+
+NHS, Oxford University Hospitals, Physitrack, CDC ve HeadStart kaynaklarıyla video örnekleri seçildi. Kaynak sayfası kullanıcı seçimiyle açılır; videolar internet gerektirir. Büyük resimler açıldığında önbelleğe alınır; yüklenmeyen resmin yerine adım şeması gösterilir. [Kaynaklar ve görsel inceleme](docs/GUIDE-SOURCES.md).

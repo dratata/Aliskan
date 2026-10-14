@@ -41,3 +41,13 @@ Kaynak kod dratata/Aliskan main dalına gönderildi ve dosya içeriği GitHub ü
 1440 px masaüstü kontrolünde yatay taşma ve JavaScript sayfa hatası yok. WebKit indirildi fakat çalıştırma için gereken sistem kitaplıkları ortamda eksik; bu motor için başarılı test iddiası yok. Gerçek iPhone doğrulaması sonraki kontroldür.
 
 Son ek doğrulama: Pomodoro tamamlama sonrası 10 net dakika kaydı ve ertesi gün 20 dakika önerisi; rehber kapalıyken uygulama içi oturum bitiş bildirimi. Sesli uyku kayıtlarına belirtilmeyen kalite/enerji puanları eklenmez.
+
+## 14 Ekim — Gösteren rehberler
+
+Kullanıcının yeni yönlendirmesiyle rehberler genişletildi: dokuz özgün üç aşamalı illüstrasyon; 60 oyuna özgü üç adımlı SVG sahneleri ve ebeveyn örnek cümleleri; bütün hareketlerde teknik kontrol noktaları; odak/nefes/sigara erteleme/beslenme ve bütün gece-sabah adımlarında nasıl yapılır rehberi. Gösterim kullanıcı kontrolünde ilerler; isteğe bağlı Türkçe seslendirme destek kontrolüyle açılır. Öğrenme gösterimi gerçek oturum veya görev kaydı oluşturmaz.
+
+10 video kaynağı kayıt altına alındı. Kurumsal kaynak sayfaları, başlıklar, ilgili metin/transkript ve mevcutsa video kimlikleri incelendi. Videolar kaynak sayfasında kullanıcı seçimiyle açılır; yabancı dil açıkça belirtilir. İlgili genel örnekler birebir etkinlik videosu olarak etiketlenmez. Kaynak ve sınırlamalar: GUIDE-SOURCES.md.
+
+Yeni veri/rehber testleriyle toplam 41 test geçti. Mobil senaryolar 19'a çıktı; adım değişimi, örnek konuşma, kaynak bağlantısı, gösterimin kayıt yaratmaması ve çevrimdışı şema senaryoları geçti. Üretim derlemesi başarılı. Büyük rehber PNG'leri ilk açılışta topluca indirilmez; açıldığında önbelleğe alınır. İnternet yoksa hareket/oyun SVG şemaları kullanılır. Kod React ve doğrulama chunk'larına ayrılarak ilk uygulama chunk'ı yaklaşık 204 kB'ye indirildi.
+
+Mevcut kullanıcı veri şeması ve kayıtlar korunur. Canlı Vercel yayını önceki hesap yetkilendirmesi engeline bağlıdır; bu çalışma canlı yayın yapılmış gibi raporlanmaz.
